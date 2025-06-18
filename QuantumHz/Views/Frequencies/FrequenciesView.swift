@@ -28,7 +28,6 @@ class AudioPlayer {
         case 639: filename = "639"
         case 741: filename = "741"
         case 852: filename = "852"
-        case 963: filename = "963"
         default: return
         }
         
@@ -182,10 +181,7 @@ struct FrequenciesView: View {
                  icon: "brain.head.profile"),
         Frequency(hz: 852, note: "La", title: "Intuitive Power",
                  description: "Benefits: Believed to strengthen intuition, support spiritual awakening, clear negative subconscious patterns, and help reach a higher level of consciousness. Facilitates return to spiritual order.",
-                 icon: "sparkles"),
-        Frequency(hz: 963, note: "Si", title: "Cosmic Healing",
-                 description: "Benefits: Believed to activate the pineal gland, perform aura cleansing, and strengthen the individual's connection with the spiritual world. Facilitates connection with universal energy and provides inner peace and clarity.",
-                 icon: "sun.max")
+                 icon: "sparkles")
     ]
     
     var body: some View {
@@ -234,9 +230,10 @@ struct FrequenciesView: View {
             .ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Modern header with glass effect
-                VStack(spacing: 15) {
+                // Professional modern header
+                VStack(spacing: 0) {
                     HStack(spacing: 16) {
+                        // Clean back button
                         Button(action: {
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                                 isBackButtonPressed = true
@@ -247,63 +244,106 @@ struct FrequenciesView: View {
                             }
                         }) {
                             Image(systemName: "chevron.left")
-                                .font(.system(size: 20, weight: .semibold))
+                                .font(.system(size: 18, weight: .semibold))
                                 .foregroundColor(Color("PrimaryColor"))
-                                .frame(width: 40, height: 40)
-                                .background(Color("PrimaryColor").opacity(0.1))
+                                .frame(width: 44, height: 44)
+                                .background(.ultraThinMaterial)
                                 .clipShape(Circle())
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color("PrimaryColor").opacity(0.3), lineWidth: 0.5)
+                                )
                         }
-                        .scaleEffect(isBackButtonPressed ? 0.95 : 1.0)
+                        .scaleEffect(isBackButtonPressed ? 0.9 : 1.0)
                         
                         Spacer()
                         
+                        // Clean title design
                         VStack(spacing: 2) {
                             Text("Solfeggio")
-                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                                .font(.system(size: 26, weight: .bold, design: .rounded))
                                 .foregroundColor(Color("PrimaryColor"))
+                            
                             Text("Frequencies")
-                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                                .font(.system(size: 26, weight: .bold, design: .rounded))
                                 .foregroundColor(Color("PrimaryColor"))
                         }
-                        .shadow(color: Color("AccentColor").opacity(0.3), radius: 2, x: 0, y: 2)
                         .frame(maxWidth: .infinity)
                         
                         Spacer()
                         
-                        HStack(spacing: 12) {
-                            Button(action: {
-                                showInfo = true
-                            }) {
-                                Image(systemName: "info.circle")
-                                    .font(.system(size: 20, weight: .semibold))
-                                    .foregroundColor(Color("PrimaryColor"))
-                                    .frame(width: 40, height: 40)
-                                    .background(Color("PrimaryColor").opacity(0.1))
-                                    .clipShape(Circle())
-                            }
-                        }
+                        // Invisible spacer
+                        Color.clear
+                            .frame(width: 44, height: 44)
                     }
-                    .padding(.horizontal)
-                    .padding(.top, 20)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                    .padding(.bottom, 20)
                 }
                 .background(
-                    Rectangle()
+                    RoundedRectangle(cornerRadius: 25)
                         .fill(.ultraThinMaterial)
-                        .shadow(color: Color("AccentColor").opacity(0.1), radius: 10, x: 0, y: 5)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 25)
+                                .stroke(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [
+                                            Color("PrimaryColor").opacity(0.3),
+                                            Color("AccentColor").opacity(0.2)
+                                        ]),
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 1
+                                )
+                        )
                 )
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
                 
                 // Modern frequency grid
                 ScrollView {
-                    LazyVGrid(columns: [
-                        GridItem(.flexible(), spacing: 10),
-                        GridItem(.flexible(), spacing: 10)
-                    ], spacing: 10) {
-                        ForEach(frequencies) { frequency in
-                            FrequencyButton(frequency: frequency) {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                    selectedFrequency = frequency
+                    VStack(spacing: 20) {
+                        LazyVGrid(columns: [
+                            GridItem(.flexible(), spacing: 10),
+                            GridItem(.flexible(), spacing: 10)
+                        ], spacing: 10) {
+                            ForEach(frequencies) { frequency in
+                                FrequencyButton(frequency: frequency) {
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                        selectedFrequency = frequency
+                                    }
                                 }
                             }
+                        }
+                        
+                        // Large Info Button
+                        Button(action: {
+                            showInfo = true
+                        }) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "info.circle.fill")
+                                    .font(.system(size: 24, weight: .semibold))
+                                    .foregroundColor(.white)
+                                
+                                Text("Learn About Solfeggio Frequencies")
+                                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                    .foregroundColor(.white)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [
+                                        Color("AccentColor"),
+                                        Color("PrimaryColor")
+                                    ]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .cornerRadius(16)
+                            .shadow(color: Color("AccentColor").opacity(0.3), radius: 8, x: 0, y: 4)
                         }
                     }
                     .padding(.horizontal)
@@ -522,9 +562,51 @@ struct FrequencyDetailView: View {
         .overlay(
             Group {
                 if isScreenBlackedOut {
-                    Color.black
-                        .ignoresSafeArea()
-                        .transition(.opacity)
+                    ZStack {
+                        Color.black
+                            .ignoresSafeArea()
+                            .transition(.opacity)
+                        
+                        VStack(spacing: 30) {
+                            // Clock
+                            VStack(spacing: 8) {
+                                Text(timeString)
+                                    .font(.system(size: 60, weight: .light, design: .rounded))
+                                    .foregroundColor(.white)
+                                    .monospacedDigit()
+                                
+                                if isPlaying {
+                                    Text("Playing \(frequency.hz) Hz")
+                                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                                        .foregroundColor(.white.opacity(0.7))
+                                }
+                            }
+                            
+                            // Back button
+                            Button(action: {
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    isScreenBlackedOut = false
+                                }
+                            }) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "chevron.left")
+                                        .font(.system(size: 16, weight: .semibold))
+                                    Text("Back")
+                                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                }
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 12)
+                                .background(.ultraThinMaterial)
+                                .clipShape(Capsule())
+                                .overlay(
+                                    Capsule()
+                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                )
+                            }
+                        }
+                    }
+                    .transition(.opacity)
                 }
             }
         )
