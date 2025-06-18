@@ -145,11 +145,12 @@ struct FrequenciesView: View {
     @State private var selectedFrequency: Frequency?
     @State private var volume: Float = 0.5
     @State private var showDescription: Bool = false
-    @State private var isScreenBlackedOut = false
-    @State private var remainingTime: Int = 600 // 10 minutes in seconds
+    @State private var remainingTime: Int = 600
     @State private var timer: Timer?
-    @State private var showInfo: Bool = false
+    @State private var showInfo = false
     @State private var isBackButtonPressed = false
+    @State private var animateBackground = false
+    private let audioPlayer = AudioPlayer()
     
     private let frequencies = [
         Frequency(hz: 111, note: "Low", title: "Cell Regeneration", 
@@ -189,118 +190,132 @@ struct FrequenciesView: View {
     
     var body: some View {
         ZStack {
-            // Background gradient
+            // Modern animated background
             LinearGradient(
                 gradient: Gradient(colors: [
                     Color("BackgroundColor"),
-                    Color("AccentColor")
+                    Color("BackgroundColor").opacity(0.9),
+                    Color("BackgroundColor").opacity(0.8),
+                    Color("AccentColor").opacity(0.3)
                 ]),
                 startPoint: .top,
                 endPoint: .bottom
             )
             .ignoresSafeArea()
             
-            VStack(spacing: 0) {
-                // Header
-                HStack {
-                    Button(action: {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            isBackButtonPressed = true
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                isBackButtonPressed = false
-                                dismiss()
-                            }
-                        }
-                    }) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(width: 40, height: 40)
-                            .background(
-                                Circle()
-                                    .fill(
-                                        LinearGradient(
-                                            gradient: Gradient(colors: [
-                                                Color.white.opacity(0.2),
-                                                Color.white.opacity(0.1)
-                                            ]),
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
+            // Animated background circles
+            ZStack {
+                ForEach(0..<3) { index in
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                gradient: Gradient(colors: [
+                                    Color("AccentColor").opacity(0.15),
+                                    Color("PrimaryColor").opacity(0.1)
+                                ]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
                             )
-                            .overlay(
-                                Circle()
-                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                            )
-                    }
-                    .scaleEffect(isBackButtonPressed ? 0.9 : 1.0)
-                    .shadow(
-                        color: isBackButtonPressed ? Color("AccentColor").opacity(0.3) : Color.black.opacity(0.2),
-                        radius: isBackButtonPressed ? 4 : 2,
-                        x: 0,
-                        y: isBackButtonPressed ? 2 : 1
-                    )
-                    
-                    Spacer()
-                    
-                    Text("Solfeggio Frequencies")
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
-                        .shadow(color: Color("AccentColor").opacity(0.3), radius: 2, x: 0, y: 2)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                    
-                    Spacer()
-                    
-                    Button(action: {
-                        showInfo = true
-                    }) {
-                        Image(systemName: "info.circle")
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(width: 40, height: 40)
-                            .background(
-                                Circle()
-                                    .fill(
-                                        LinearGradient(
-                                            gradient: Gradient(colors: [
-                                                Color.white.opacity(0.2),
-                                                Color.white.opacity(0.1)
-                                            ]),
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                            )
-                            .overlay(
-                                Circle()
-                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                            )
-                    }
+                        )
+                        .frame(width: 250 + CGFloat(index * 60))
+                        .blur(radius: 30)
+                        .offset(
+                            x: animateBackground ? CGFloat.random(in: -150...150) : 0,
+                            y: animateBackground ? CGFloat.random(in: -150...150) : 0
+                        )
+                        .animation(
+                            Animation.easeInOut(duration: 10)
+                                .repeatForever(autoreverses: true)
+                                .delay(Double(index) * 2),
+                            value: animateBackground
+                        )
                 }
-                .padding(.horizontal)
-                .padding(.top, 10)
-                .padding(.bottom, 20)
-                
-                // Frequency Grid
-                ScrollView {
-                    LazyVGrid(columns: [
-                        GridItem(.flexible(), spacing: 15),
-                        GridItem(.flexible(), spacing: 15)
-                    ], spacing: 15) {
-                        ForEach(frequencies) { frequency in
-                            FrequencyButton(frequency: frequency) {
-                                selectedFrequency = frequency
+            }
+            .ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                // Modern header with glass effect
+                VStack(spacing: 15) {
+                    HStack(spacing: 16) {
+                        Button(action: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                isBackButtonPressed = true
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    isBackButtonPressed = false
+                                    dismiss()
+                                }
+                            }
+                        }) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundColor(Color("PrimaryColor"))
+                                .frame(width: 40, height: 40)
+                                .background(Color("PrimaryColor").opacity(0.1))
+                                .clipShape(Circle())
+                        }
+                        .scaleEffect(isBackButtonPressed ? 0.95 : 1.0)
+                        
+                        Spacer()
+                        
+                        VStack(spacing: 2) {
+                            Text("Solfeggio")
+                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                                .foregroundColor(Color("PrimaryColor"))
+                            Text("Frequencies")
+                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                                .foregroundColor(Color("PrimaryColor"))
+                        }
+                        .shadow(color: Color("AccentColor").opacity(0.3), radius: 2, x: 0, y: 2)
+                        .frame(maxWidth: .infinity)
+                        
+                        Spacer()
+                        
+                        HStack(spacing: 12) {
+                            Button(action: {
+                                showInfo = true
+                            }) {
+                                Image(systemName: "info.circle")
+                                    .font(.system(size: 20, weight: .semibold))
+                                    .foregroundColor(Color("PrimaryColor"))
+                                    .frame(width: 40, height: 40)
+                                    .background(Color("PrimaryColor").opacity(0.1))
+                                    .clipShape(Circle())
                             }
                         }
                     }
                     .padding(.horizontal)
+                    .padding(.top, 20)
+                }
+                .background(
+                    Rectangle()
+                        .fill(.ultraThinMaterial)
+                        .shadow(color: Color("AccentColor").opacity(0.1), radius: 10, x: 0, y: 5)
+                )
+                
+                // Modern frequency grid
+                ScrollView {
+                    LazyVGrid(columns: [
+                        GridItem(.flexible(), spacing: 10),
+                        GridItem(.flexible(), spacing: 10)
+                    ], spacing: 10) {
+                        ForEach(frequencies) { frequency in
+                            FrequencyButton(frequency: frequency) {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    selectedFrequency = frequency
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 20)
                 }
             }
         }
+        .onAppear {
+            animateBackground = true
+        }
         .fullScreenCover(item: $selectedFrequency) { frequency in
-            FrequencyDetailView(frequency: frequency)
+            FrequencyDetailView(frequency: frequency, audioPlayer: audioPlayer)
         }
         .sheet(isPresented: $showInfo) {
             ScrollView {
@@ -322,19 +337,8 @@ struct FrequenciesView: View {
                                 .font(.system(size: 20, weight: .semibold))
                                 .foregroundColor(.white)
                                 .frame(width: 40, height: 40)
-                                .background(
-                                    Circle()
-                                        .fill(
-                                            LinearGradient(
-                                                gradient: Gradient(colors: [
-                                                    Color.white.opacity(0.2),
-                                                    Color.white.opacity(0.1)
-                                                ]),
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            )
-                                        )
-                                )
+                                .background(.ultraThinMaterial)
+                                .clipShape(Circle())
                                 .overlay(
                                     Circle()
                                         .stroke(Color.white.opacity(0.2), lineWidth: 1)
@@ -408,11 +412,11 @@ struct FrequencyButton: View {
                 }
             }
         }) {
-            VStack(spacing: 8) {
+            VStack(spacing: 6) {
                 Image(systemName: frequency.icon)
-                    .font(.system(size: 24, weight: .medium))
+                    .font(.system(size: 20, weight: .medium))
                     .foregroundColor(.white)
-                    .frame(width: 45, height: 45)
+                    .frame(width: 35, height: 35)
                     .background(
                         Circle()
                             .fill(
@@ -427,43 +431,31 @@ struct FrequencyButton: View {
                             )
                     )
                     .shadow(color: Color("AccentColor").opacity(0.3),
-                           radius: 6, x: 0, y: 3)
+                           radius: 4, x: 0, y: 2)
                 
-                VStack(spacing: 2) {
+                VStack(spacing: 1) {
                     Text("\(frequency.hz) Hz")
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
                     
                     Text(frequency.note)
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
                         .foregroundColor(.white.opacity(0.7))
                 }
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 15)
-                    .fill(Color.white.opacity(0.05))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 15)
-                            .stroke(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [
-                                        Color.white.opacity(0.2),
-                                        Color.white.opacity(0.1)
-                                    ]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 1
-                            )
-                    )
+            .padding(.vertical, 8)
+            .background(.ultraThinMaterial)
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
             )
             .shadow(
                 color: isPressed ? Color("AccentColor").opacity(0.3) : Color.black.opacity(0.2),
-                radius: isPressed ? 6 : 3,
+                radius: isPressed ? 4 : 2,
                 x: 0,
-                y: isPressed ? 3 : 1
+                y: isPressed ? 2 : 1
             )
             .scaleEffect(isPressed ? 0.95 : 1.0)
         }
@@ -472,14 +464,28 @@ struct FrequencyButton: View {
 
 struct FrequencyDetailView: View {
     let frequency: Frequency
+    let audioPlayer: AudioPlayer
     @Environment(\.dismiss) private var dismiss
     @State private var isPlaying = false
     @State private var volume: Float = 0.5
-    @State private var remainingTime: Int = 600 // 10 minutes in seconds
+    @State private var remainingTime: Int = 600
     @State private var timer: Timer?
     @State private var isScreenBlackedOut = false
     @State private var showBlackoutConfirmation = false
-    private let audioPlayer = AudioPlayer()
+    @State private var selectedDuration: Int = 10
+    @State private var showCustomDurationAlert = false
+    @State private var customDuration = ""
+    @State private var customDurationError = ""
+    @State private var isCustomDurationActive = false
+    @State private var isBackButtonPressed = false
+    @State private var showInfo = false
+    
+    private let durations = [10, 15]
+    private let columns = [
+        GridItem(.flexible()),
+        GridItem(.flexible()),
+        GridItem(.flexible())
+    ]
     
     private var timeString: String {
         let minutes = remainingTime / 60
@@ -489,284 +495,371 @@ struct FrequencyDetailView: View {
     
     var body: some View {
         ZStack {
-            // Background gradient
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color("BackgroundColor"),
-                    Color("AccentColor")
-                ]),
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-            
-            VStack(spacing: 15) {
-                // Header
-                HStack(spacing: 15) {
-                    Button(action: { dismiss() }) {
-                        Image(systemName: "xmark")
-                            .font(.title2)
-                            .foregroundColor(.white.opacity(0.7))
-                            .padding(12)
-                            .background(Color.white.opacity(0.1))
-                            .clipShape(Circle())
-                    }
-                    
-                    Spacer()
-                    
-                    VStack(spacing: 4) {
-                        Text("\(frequency.hz) Hz")
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
-                            .foregroundColor(.white)
-                        
-                        Text(frequency.note)
-                            .font(.system(size: 16, weight: .medium, design: .rounded))
-                            .foregroundColor(.white.opacity(0.7))
-                    }
-                    
-                    Spacer()
-                    
-                    // Empty view for balance
-                    Color.clear
-                        .frame(width: 44, height: 44)
-                }
-                .padding(.horizontal)
-                .padding(.top, 10)
-                
-                // Icon
-                Image(systemName: frequency.icon)
-                    .font(.system(size: 50))
-                    .foregroundColor(.white)
-                    .padding(25)
-                    .background(
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [
-                                        Color("AccentColor"),
-                                        Color("PrimaryColor")
-                                    ]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                    )
-                    .shadow(color: Color("AccentColor").opacity(0.3),
-                           radius: 15, x: 0, y: 10)
-                
-                // Title
-                Text(frequency.title)
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-                
-                // Timer Display
-                if isPlaying {
-                    VStack(spacing: 4) {
-                        Text(timeString)
-                            .font(.system(size: 40, weight: .bold, design: .rounded))
-                            .foregroundColor(.white)
-                            .monospacedDigit()
-                        
-                        Text("Recommended listening time")
-                            .font(.system(size: 12, weight: .medium, design: .rounded))
-                            .foregroundColor(.white.opacity(0.7))
-                    }
-                    .padding(.vertical, 5)
-                }
-                
-                // Wave Animation replaced with Audio Visualizer
-                if isPlaying {
-                    AudioVisualizer(frequency: frequency.hz)
-                        .padding(.vertical, 5)
-                }
-                
-                // Description
-                VStack(spacing: 10) {
-                    Text(frequency.description)
-                        .font(.system(size: 14, weight: .regular, design: .rounded))
-                        .foregroundColor(.white.opacity(0.9))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 15)
-                                .fill(Color.white.opacity(0.05))
-                        )
-                    
-                    // Warning about minimum listening time
-                    HStack(spacing: 8) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(.yellow)
-                        Text("For optimal results, listen to this frequency for at least 10 minutes.")
-                            .font(.system(size: 12, weight: .medium, design: .rounded))
-                            .foregroundColor(.white.opacity(0.9))
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 15)
-                            .fill(Color.yellow.opacity(0.1))
-                    )
-                }
-                .padding(.horizontal)
-                
-                Spacer()
-                
-                // Play/Stop Button
-                Button(action: {
-                    if isPlaying {
-                        audioPlayer.stop()
-                        timer?.invalidate()
-                        timer = nil
-                    } else {
-                        audioPlayer.play(frequency: frequency.hz, volume: volume)
-                        remainingTime = 600 // Reset to 10 minutes
-                        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-                            if remainingTime > 0 {
-                                remainingTime -= 1
-                            } else {
-                                timer?.invalidate()
-                                timer = nil
-                            }
-                        }
-                    }
-                    isPlaying.toggle()
-                }) {
-                    HStack {
-                        Image(systemName: isPlaying ? "stop.fill" : "play.fill")
-                            .font(.title2)
-                        Text(isPlaying ? "Stop" : "Play")
-                            .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                Color("AccentColor"),
-                                Color("PrimaryColor")
-                            ]),
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 15))
-                    .shadow(color: Color("AccentColor").opacity(0.3),
-                           radius: 10, x: 0, y: 5)
-                }
-                .padding(.horizontal)
-                
-                // Volume Control
-                VStack(spacing: 4) {
-                    HStack {
-                        Image(systemName: "speaker.fill")
-                            .foregroundColor(.white.opacity(0.7))
-                        Slider(value: Binding(
-                            get: { Double(volume) },
-                            set: { 
-                                volume = Float($0)
-                                audioPlayer.setVolume(volume)
-                            }
-                        ))
-                        .accentColor(Color("AccentColor"))
-                        Image(systemName: "speaker.wave.3.fill")
-                            .foregroundColor(.white.opacity(0.7))
-                    }
-                    .padding(.horizontal)
-                }
-                
-                // Blackout Button
-                Button(action: {
-                    showBlackoutConfirmation = true
-                }) {
-                    HStack {
-                        Image(systemName: "moon.fill")
-                            .font(.title2)
-                        Text("Turn Off Screen")
-                            .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                Color("BackgroundColor"),
-                                Color("AccentColor")
-                            ]),
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 15))
-                    .shadow(color: Color("AccentColor").opacity(0.2),
-                           radius: 10, x: 0, y: 5)
-                }
-                .padding(.horizontal)
-                .padding(.bottom, 20)
-            }
-            .padding(.vertical, 20)
+            backgroundView
+            mainContentView
         }
-        .overlay {
+        .confirmationDialog(
+            "Turn off screen?",
+            isPresented: $showBlackoutConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Turn off screen") {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    isScreenBlackedOut = true
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The screen will turn off. Tap anywhere to turn it back on.")
+        }
+        .onTapGesture {
             if isScreenBlackedOut {
-                Color.black
-                    .ignoresSafeArea()
-                    .overlay {
-                        VStack(spacing: 40) {
-                            Text(timeString)
-                                .font(.system(size: 80, weight: .bold, design: .rounded))
-                                .foregroundColor(.white.opacity(0.9))
-                                .monospacedDigit()
-                            
-                            Button(action: {
-                                withAnimation(.easeInOut(duration: 0.3)) {
-                                    isScreenBlackedOut = false
-                                }
-                            }) {
-                                VStack(spacing: 15) {
-                                    Image(systemName: "hand.tap.fill")
-                                        .font(.system(size: 50))
-                                        .foregroundColor(.white.opacity(0.9))
-                                    
-                                    Text("Turn on screen")
-                                        .font(.system(size: 24, weight: .medium, design: .rounded))
-                                        .foregroundColor(.white.opacity(0.9))
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 25)
-                                .padding(.horizontal, 40)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 25)
-                                        .fill(Color.white.opacity(0.15))
-                                )
-                                .padding(.horizontal, 40)
-                            }
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    isScreenBlackedOut = false
+                }
             }
         }
-        .animation(.easeInOut(duration: 0.3), value: isScreenBlackedOut)
-        .navigationBarHidden(true)
+        .overlay(
+            Group {
+                if isScreenBlackedOut {
+                    Color.black
+                        .ignoresSafeArea()
+                        .transition(.opacity)
+                }
+            }
+        )
         .onDisappear {
             audioPlayer.stop()
             timer?.invalidate()
             timer = nil
         }
-        .confirmationDialog(
-            "Turn Off Screen",
-            isPresented: $showBlackoutConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button("Turn Off Screen") {
-                isScreenBlackedOut = true
+    }
+    
+    private var backgroundView: some View {
+        LinearGradient(
+            gradient: Gradient(colors: [
+                Color("BackgroundColor"),
+                Color("BackgroundColor").opacity(0.9),
+                Color("BackgroundColor").opacity(0.8),
+                Color("AccentColor").opacity(0.3)
+            ]),
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .ignoresSafeArea()
+    }
+    
+    private var mainContentView: some View {
+        ScrollView {
+            VStack(spacing: 15) {
+                headerView
+                iconView
+                controlsView
+                playerControlsView
+                durationSelectorView
+                timerView
             }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("The screen will turn off. Tap anywhere to turn it back on.")
+            .padding(.horizontal)
+        }
+    }
+    
+    private var headerView: some View {
+        HStack(spacing: 16) {
+            backButton
+            Spacer()
+            titleView
+            Spacer()
+            actionButtons
+        }
+        .padding(.horizontal)
+        .padding(.top, 20)
+    }
+    
+    private var backButton: some View {
+        Button(action: {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                isBackButtonPressed = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    isBackButtonPressed = false
+                    dismiss()
+                }
+            }
+        }) {
+            Image(systemName: "chevron.left")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(Color("PrimaryColor"))
+                .frame(width: 40, height: 40)
+                .background(Color("PrimaryColor").opacity(0.1))
+                .clipShape(Circle())
+        }
+        .scaleEffect(isBackButtonPressed ? 0.95 : 1.0)
+    }
+    
+    private var titleView: some View {
+        VStack(spacing: 2) {
+            Text("Solfeggio")
+                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .foregroundColor(Color("PrimaryColor"))
+            Text("Frequencies")
+                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .foregroundColor(Color("PrimaryColor"))
+        }
+        .shadow(color: Color("AccentColor").opacity(0.3), radius: 2, x: 0, y: 2)
+        .frame(maxWidth: .infinity)
+    }
+    
+    private var actionButtons: some View {
+        Button(action: {
+            showBlackoutConfirmation = true
+        }) {
+            Image(systemName: "moon.fill")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(Color("PrimaryColor"))
+                .frame(width: 40, height: 40)
+                .background(Color("PrimaryColor").opacity(0.1))
+                .clipShape(Circle())
+        }
+    }
+    
+    private var iconView: some View {
+        Image(systemName: frequency.icon)
+            .font(.system(size: 50))
+            .foregroundColor(Color("PrimaryColor"))
+            .frame(width: 100, height: 100)
+            .background(
+                Circle()
+                    .fill(Color("PrimaryColor").opacity(0.1))
+            )
+            .shadow(color: Color("AccentColor").opacity(0.3),
+                   radius: 15, x: 0, y: 10)
+    }
+    
+    private var controlsView: some View {
+        VStack(spacing: 15) {
+            Text(frequency.title)
+                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .foregroundColor(.white)
+            
+            Text(frequency.description)
+                .font(.system(size: 16, weight: .medium, design: .rounded))
+                .foregroundColor(.white.opacity(0.7))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+        }
+        .padding(.vertical, 20)
+    }
+    
+    private var playerControlsView: some View {
+        VStack(spacing: 15) {
+            volumeControlView
+            
+            playButton
+        }
+        .padding(.vertical, 20)
+    }
+    
+    private var volumeControlView: some View {
+        HStack(spacing: 20) {
+            Button(action: {
+                if volume > 0.1 {
+                    volume -= 0.1
+                    audioPlayer.setVolume(volume)
+                }
+            }) {
+                Image(systemName: "speaker.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(.white.opacity(0.7))
+            }
+            
+            Slider(value: $volume, in: 0...1)
+                .accentColor(Color("AccentColor"))
+                .onChange(of: volume) { newValue in
+                    audioPlayer.setVolume(newValue)
+                }
+            
+            Button(action: {
+                if volume < 0.9 {
+                    volume += 0.1
+                    audioPlayer.setVolume(volume)
+                }
+            }) {
+                Image(systemName: "speaker.wave.3.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(.white.opacity(0.7))
+            }
+        }
+        .padding(.horizontal)
+    }
+    
+    private var playButton: some View {
+        Button(action: {
+            isPlaying.toggle()
+            if isPlaying {
+                audioPlayer.play(frequency: frequency.hz, volume: volume)
+                startTimer()
+            } else {
+                audioPlayer.stop()
+                timer?.invalidate()
+                timer = nil
+            }
+        }) {
+            Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                .font(.system(size: 60))
+                .foregroundColor(Color("AccentColor"))
+        }
+    }
+    
+    private var durationSelectorView: some View {
+        Group {
+            if !isPlaying {
+                VStack(spacing: 15) {
+                    Text("Select Duration")
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                    
+                    LazyVGrid(columns: columns, spacing: 15) {
+                        ForEach(durations, id: \.self) { duration in
+                            durationButton(duration)
+                        }
+                        
+                        customDurationButton
+                    }
+                    .padding(.horizontal)
+                }
+                .padding(.bottom, 20)
+            }
+        }
+    }
+    
+    private func durationButton(_ duration: Int) -> some View {
+        Button(action: {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                selectedDuration = duration
+                isCustomDurationActive = false
+            }
+        }) {
+            Text("\(duration) min")
+                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .foregroundColor(selectedDuration == duration && !isCustomDurationActive ? .white : Color("PrimaryColor"))
+                .frame(height: 40)
+                .frame(maxWidth: .infinity)
+                .background(
+                    ZStack {
+                        if selectedDuration == duration && !isCustomDurationActive {
+                            LinearGradient(
+                                gradient: Gradient(colors: [
+                                    Color("AccentColor"),
+                                    Color("AccentColor").opacity(0.8)
+                                ]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        } else {
+                            Color("PrimaryColor").opacity(0.05)
+                        }
+                    }
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(
+                            selectedDuration == duration && !isCustomDurationActive
+                            ? Color("AccentColor")
+                            : Color("PrimaryColor").opacity(0.1),
+                            lineWidth: selectedDuration == duration && !isCustomDurationActive ? 2 : 1
+                        )
+                )
+                .shadow(
+                    color: selectedDuration == duration && !isCustomDurationActive
+                    ? Color("AccentColor").opacity(0.3)
+                    : Color("PrimaryColor").opacity(0.05),
+                    radius: selectedDuration == duration && !isCustomDurationActive ? 8 : 4,
+                    x: 0,
+                    y: 4
+                )
+        }
+    }
+    
+    private var customDurationButton: some View {
+        Button(action: {
+            showCustomDurationAlert = true
+        }) {
+            HStack(spacing: 2) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                Text("Custom")
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+            }
+            .foregroundColor(isCustomDurationActive ? .white : Color("PrimaryColor"))
+            .frame(height: 40)
+            .frame(maxWidth: .infinity)
+            .background(
+                ZStack {
+                    if isCustomDurationActive {
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color("AccentColor"),
+                                Color("AccentColor").opacity(0.8)
+                            ]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    } else {
+                        Color("PrimaryColor").opacity(0.05)
+                    }
+                }
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(
+                        isCustomDurationActive
+                        ? Color("AccentColor")
+                        : Color("PrimaryColor").opacity(0.1),
+                        lineWidth: isCustomDurationActive ? 2 : 1
+                    )
+            )
+            .shadow(
+                color: isCustomDurationActive
+                ? Color("AccentColor").opacity(0.3)
+                : Color("PrimaryColor").opacity(0.05),
+                radius: isCustomDurationActive ? 8 : 4,
+                x: 0,
+                y: 4
+            )
+        }
+    }
+    
+    private var timerView: some View {
+        Group {
+            if isPlaying {
+                VStack(spacing: 4) {
+                    Text(timeString)
+                        .font(.system(size: 40, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .monospacedDigit()
+                    
+                    Text("Recommended listening time")
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                .padding(.vertical, 5)
+            }
+        }
+    }
+    
+    private func startTimer() {
+        remainingTime = selectedDuration * 60
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+            if remainingTime > 0 {
+                remainingTime -= 1
+            } else {
+                timer?.invalidate()
+                timer = nil
+                isPlaying = false
+                audioPlayer.stop()
+            }
         }
     }
 }
