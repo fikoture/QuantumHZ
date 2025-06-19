@@ -11,12 +11,15 @@ struct ContentView: View {
     @State private var isMusicPlaying = true
     @State private var audioPlayer: AVAudioPlayer?
     @State private var isShowingInfo = false
+    @State private var isShowingPremiumSheet = false
     
     // Navigation states
     @State private var showMeditation = false
     @State private var showWhiteNoise = false
     @State private var showFrequencies = false
     @State private var showSoundSessions = false
+    
+    @State private var showPremiumPurchaseAlert = false
     
     private var isIPad: Bool {
         horizontalSizeClass == .regular
@@ -72,10 +75,47 @@ struct ContentView: View {
             .ignoresSafeArea()
             
             VStack(spacing: 25) {
-                // Music control and title
+                // Üstte logo ve başlık
+                VStack(spacing: 15) {
+                    Image("AppIcon")
+                        .resizable()
+                        .frame(width: 110, height: 110)
+                        .clipShape(RoundedRectangle(cornerRadius: 30))
+                        .shadow(color: Color("AccentColor").opacity(0.4), radius: 20, x: 0, y: 10)
+                        .scaleEffect(logoScale)
+                        .rotationEffect(.degrees(logoRotation))
+                        .onAppear {
+                            withAnimation(Animation.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
+                                logoScale = 1.2
+                                logoRotation = 360
+                            }
+                            setupAudioPlayer()
+                        }
+                    Text("QuantumHz")
+                        .font(.system(size: 40, weight: .bold, design: .rounded))
+                        .foregroundColor(Color("PrimaryColor"))
+                        .shadow(color: Color("AccentColor").opacity(0.3), radius: 2, x: 0, y: 2)
+                }
+                .padding(.top, 10)
+                
+                // Üstte info ve ses butonları hizalı
                 HStack {
+                    Button(action: { isShowingInfo = true }) {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 32))
+                            .foregroundColor(Color("AccentColor"))
+                            .frame(width: 48, height: 48)
+                            .background(
+                                Circle()
+                                    .fill(.ultraThinMaterial)
+                                    .overlay(
+                                        Circle()
+                                            .stroke(Color("PrimaryColor").opacity(0.2), lineWidth: 1)
+                                    )
+                            )
+                            .shadow(color: Color("PrimaryColor").opacity(0.1), radius: 10, x: 0, y: 5)
+                    }
                     Spacer()
-                    
                     Button(action: {
                         if isMusicPlaying {
                             audioPlayer?.pause()
@@ -104,108 +144,102 @@ struct ContentView: View {
                     }
                 }
                 .padding(.horizontal)
+                .padding(.top, 8)
                 
-                // Logo and title
-                VStack(spacing: 15) {
-                    Image("AppIcon")
-                        .resizable()
-                        .frame(width: 110, height: 110)
-                        .clipShape(RoundedRectangle(cornerRadius: 30))
-                        .shadow(color: Color("AccentColor").opacity(0.4), radius: 20, x: 0, y: 10)
-                        .scaleEffect(logoScale)
-                        .rotationEffect(.degrees(logoRotation))
-                        .onAppear {
-                            withAnimation(Animation.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
-                                logoScale = 1.2
-                                logoRotation = 360
-                            }
-                            setupAudioPlayer()
-                        }
-                    
-                    Text("QuantumHz")
-                        .font(.system(size: 40, weight: .bold, design: .rounded))
-                        .foregroundColor(Color("PrimaryColor"))
-                        .shadow(color: Color("AccentColor").opacity(0.3), radius: 2, x: 0, y: 2)
-                }
-                .padding(.top, 20)
-                
-                // Feature cards
+                // Kartlar ve premium statü birlikte scrollable olacak
                 ScrollView {
-                    LazyVGrid(columns: columns, spacing: 20) {
-                        Button(action: {
-                            audioPlayer?.stop()
-                            audioPlayer = nil
-                            isMusicPlaying = false
-                            showMeditation = true
-                        }) {
-                            FeatureCard(
-                                title: "Meditation Timer",
-                                icon: "chart.bar.fill",
-                                description: "Enhance your mindfulness and relax deeply with personalized meditation guidance."
-                            )
+                    VStack(spacing: 20) {
+                        LazyVGrid(columns: columns, spacing: 20) {
+                            Button(action: {
+                                audioPlayer?.stop()
+                                audioPlayer = nil
+                                isMusicPlaying = false
+                                showMeditation = true
+                            }) {
+                                FeatureCard(
+                                    title: "Meditation Timer",
+                                    icon: "chart.bar.fill",
+                                    description: "Enhance your mindfulness and relax deeply with personalized meditation guidance."
+                                )
+                            }
+                            Button(action: {
+                                audioPlayer?.stop()
+                                audioPlayer = nil
+                                isMusicPlaying = false
+                                showWhiteNoise = true
+                            }) {
+                                FeatureCard(
+                                    title: "White Noise",
+                                    icon: "waveform.circle.fill",
+                                    description: "Relax with soothing sounds and ambient noise"
+                                )
+                            }
+                            Button(action: {
+                                audioPlayer?.stop()
+                                audioPlayer = nil
+                                isMusicPlaying = false
+                                showFrequencies = true
+                            }) {
+                                FeatureCard(
+                                    title: "Frequencies",
+                                    icon: "waveform.path.ecg",
+                                    description: "Explore theta, alpha, beta tones"
+                                )
+                            }
+                            Button(action: {
+                                audioPlayer?.stop()
+                                audioPlayer = nil
+                                isMusicPlaying = false
+                                showSoundSessions = true
+                            }) {
+                                FeatureCard(
+                                    title: "Sound Sessions",
+                                    icon: "headphones",
+                                    description: "Create or join meditative sound loops"
+                                )
+                            }
                         }
+                        .padding(.horizontal)
                         
-                        Button(action: {
-                            audioPlayer?.stop()
-                            audioPlayer = nil
-                            isMusicPlaying = false
-                            showWhiteNoise = true
-                        }) {
-                            FeatureCard(
-                                title: "White Noise",
-                                icon: "waveform.circle.fill",
-                                description: "Relax with soothing sounds and ambient noise"
-                            )
+                        // Premium Status Section (kartların hemen altında)
+                        VStack(spacing: 10) {
+                            Text("Your Plan")
+                                .font(.subheadline)
+                                .foregroundColor(Color("SecondaryColor"))
+                            Text(userService.isPremium() ? "Premium" : "Free")
+                                .font(.title3.bold())
+                                .foregroundColor(userService.isPremium() ? .green : .gray)
+                            if !userService.isPremium() {
+                                Button(action: { isShowingPremiumSheet = true }) {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "star.fill")
+                                            .foregroundColor(.yellow)
+                                            .font(.system(size: 18, weight: .bold))
+                                        Text("Upgrade to Premium")
+                                            .font(.headline)
+                                    }
+                                    .foregroundColor(.white)
+                                    .padding(.vertical, 10)
+                                    .padding(.horizontal, 24)
+                                    .background(Color("AccentColor"))
+                                    .cornerRadius(12)
+                                }
+                                .padding(.top, 4)
+                            }
                         }
-                        
-                        Button(action: {
-                            audioPlayer?.stop()
-                            audioPlayer = nil
-                            isMusicPlaying = false
-                            showFrequencies = true
-                        }) {
-                            FeatureCard(
-                                title: "Frequencies",
-                                icon: "waveform.path.ecg",
-                                description: "Explore theta, alpha, beta tones"
-                            )
-                        }
-                        
-                        Button(action: {
-                            audioPlayer?.stop()
-                            audioPlayer = nil
-                            isMusicPlaying = false
-                            showSoundSessions = true
-                        }) {
-                            FeatureCard(
-                                title: "Sound Sessions",
-                                icon: "headphones",
-                                description: "Create or join meditative sound loops"
-                            )
-                        }
+                        .padding(12)
+                        .frame(maxWidth: 320)
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(18)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18)
+                                .stroke(Color("PrimaryColor").opacity(0.15), lineWidth: 1)
+                        )
+                        .padding(.bottom, 8)
                     }
-                    .padding(.horizontal)
                 }
                 
                 Spacer()
-                
-                // Info Button with glass effect
-                Button(action: { isShowingInfo = true }) {
-                    Image(systemName: "info.circle")
-                        .font(.system(size: 32))
-                        .foregroundColor(Color("AccentColor"))
-                        .frame(width: 58, height: 58)
-                        .background(
-                            Circle()
-                                .fill(.ultraThinMaterial)
-                                .overlay(
-                                    Circle()
-                                        .stroke(Color("PrimaryColor").opacity(0.2), lineWidth: 1)
-                                )
-                        )
-                        .shadow(color: Color("PrimaryColor").opacity(0.1), radius: 10, x: 0, y: 5)
-                }
-                .padding(.bottom, 20)
             }
         }
         .fullScreenCover(isPresented: $showMeditation) {
@@ -222,6 +256,86 @@ struct ContentView: View {
         }
         .sheet(isPresented: $isShowingInfo) {
             InfoView(isPresented: $isShowingInfo)
+        }
+        .sheet(isPresented: $isShowingPremiumSheet) {
+            ScrollView {
+                VStack(spacing: 22) {
+                    Text("Compare Plans")
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundColor(Color("PrimaryColor"))
+                        .padding(.top, 10)
+                    VStack(alignment: .leading, spacing: 14) {
+                        Text("Standard")
+                            .font(.headline)
+                            .foregroundColor(.gray)
+                        Divider()
+                        FeatureRow(text: "Listen to the first 3 frequencies (111, 174, 285 Hz)", available: true)
+                        FeatureRow(text: "Read all frequency details", available: true)
+                        FeatureRow(text: "Meditation timer & basic sounds", available: true)
+                        FeatureRow(text: "White noise & basic sound sessions", available: true)
+                        FeatureRow(text: "Unlimited access to all frequencies", available: false)
+                        FeatureRow(text: "Unlimited duration & exclusive sounds", available: false)
+                        FeatureRow(text: "Full access to all sound sessions & white noise", available: false)
+                        FeatureRow(text: "Upcoming premium features & updates", available: false)
+                    }
+                    .padding(14)
+                    .background(Color.white.opacity(0.07))
+                    .cornerRadius(16)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color.gray.opacity(0.15), lineWidth: 1)
+                    )
+                    VStack(alignment: .leading, spacing: 14) {
+                        Text("Premium")
+                            .font(.headline)
+                            .foregroundColor(Color("AccentColor"))
+                        Divider()
+                        FeatureRow(text: "Listen to all frequencies (no limits)", available: true)
+                        FeatureRow(text: "Read all frequency details", available: true)
+                        FeatureRow(text: "Meditation timer & basic sounds", available: true)
+                        FeatureRow(text: "White noise & all sound sessions", available: true)
+                        FeatureRow(text: "Unlimited duration & exclusive sounds", available: true)
+                        FeatureRow(text: "Upcoming premium features & updates", available: true)
+                    }
+                    .padding(14)
+                    .background(Color("AccentColor").opacity(0.08))
+                    .cornerRadius(16)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color("AccentColor").opacity(0.18), lineWidth: 1)
+                    )
+                    HStack(spacing: 16) {
+                        Button("Close") {
+                            isShowingPremiumSheet = false
+                        }
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 28)
+                        .background(Color("AccentColor"))
+                        .cornerRadius(14)
+                        Button("Get Premium") {
+                            showPremiumPurchaseAlert = true
+                        }
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 28)
+                        .background(Color("PrimaryColor"))
+                        .cornerRadius(14)
+                    }
+                    .padding(.top, 8)
+                }
+                .padding(24)
+            }
+            .background(
+                LinearGradient(
+                    gradient: Gradient(colors: [Color("BackgroundColor"), Color("PrimaryColor").opacity(0.08)]),
+                    startPoint: .top, endPoint: .bottom)
+            )
+        }
+        .alert(isPresented: $showPremiumPurchaseAlert) {
+            Alert(title: Text("Premium Subscription"), message: Text("This is a demo. Integrate your purchase flow here."), dismissButton: .default(Text("OK")))
         }
     }
     
@@ -370,6 +484,22 @@ struct InfoView: View {
             .cornerRadius(10)
         }
         .padding()
+    }
+}
+
+// Modern feature row for plan comparison
+fileprivate struct FeatureRow: View {
+    let text: String
+    let available: Bool
+    var body: some View {
+        HStack(alignment: .center, spacing: 8) {
+            Image(systemName: available ? "checkmark.seal.fill" : "xmark.seal")
+                .foregroundColor(available ? Color("AccentColor") : .gray)
+                .font(.system(size: 18, weight: .semibold))
+            Text(text)
+                .foregroundColor(.white)
+                .font(.system(size: 15, weight: .medium, design: .rounded))
+        }
     }
 }
 
