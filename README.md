@@ -1,2 +1,0 @@
-# QuantumHZ
-QuantumHZ Meditation app
