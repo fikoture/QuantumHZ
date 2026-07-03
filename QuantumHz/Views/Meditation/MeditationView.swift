@@ -21,6 +21,7 @@ class AudioPlayerManager: NSObject {
 
 struct MeditationView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var userService: UserService
     @State private var selectedDuration: Int = 5
     @State private var customDuration: String = ""
     @State private var isCustomDurationActive: Bool = false
@@ -38,6 +39,7 @@ struct MeditationView: View {
     @State private var clockTimer: Timer?
     @State private var showYouTubePlayer: Bool = false
     @State private var isRadioPlaying = false
+    @State private var showPremiumSheet = false
     
     private let durations = [5, 10, 15]
     private let sounds = [
@@ -48,7 +50,7 @@ struct MeditationView: View {
     ]
     
     private let columns = [
-        GridItem(.adaptive(minimum: 70, maximum: 80), spacing: 12)
+        GridItem(.adaptive(minimum: 60, maximum: 70), spacing: 10)
     ]
     
     // Radio stream URL
@@ -69,423 +71,357 @@ struct MeditationView: View {
             .ignoresSafeArea()
             
             if isScreenBlackedOut {
-                // Black screen with only clock and turn on button
-                Color.black
-                    .ignoresSafeArea()
-                    .transition(.opacity)
-                
-                VStack {
-                    Spacer()
-                        .frame(height: 200)
-                    
-                    Text(timeString(from: currentTime))
-                        .font(.system(size: 44, weight: .thin, design: .rounded))
-                        .foregroundColor(.white)
-                        .monospacedDigit()
-                    
-                    Spacer()
-                        .frame(height: 40)
-                    
-                    Button(action: {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            isScreenBlackedOut = false
-                            stopClockTimer()
-                        }
-                    }) {
-                        Text("Turn on screen")
-                            .font(.system(size: 16, weight: .medium, design: .rounded))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 10)
-                            .background(Color.white.opacity(0.2))
-                            .cornerRadius(20)
-                    }
-                }
+                blackoutView
             } else {
-                // Normal view with all UI elements
-                VStack(spacing: 25) {
-                    // Title and screen blackout button in same row
-                    HStack {
-                        Button(action: {
-                            audioPlayer?.stop()
-                            audioPlayer = nil
-                            dismiss()
-                        }) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 20, weight: .semibold))
-                                .foregroundColor(Color("PrimaryColor"))
-                                .frame(width: 40, height: 40)
-                                .background(Color("PrimaryColor").opacity(0.1))
-                                .clipShape(Circle())
-                        }
-                        
-                        Spacer()
-                        
-                        Text("Meditation Timer")
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
-                            .foregroundColor(Color("PrimaryColor"))
-                            .shadow(color: Color("AccentColor").opacity(0.3), radius: 2, x: 0, y: 2)
-                        
-                        Spacer()
-                        
-                        Button(action: {
-                            showBlackoutConfirmation = true
-                        }) {
-                            Image(systemName: isScreenBlackedOut ? "eye.slash.fill" : "eye.slash")
-                                .font(.system(size: 20, weight: .semibold))
-                                .foregroundColor(Color("PrimaryColor"))
-                                .frame(width: 40, height: 40)
-                                .background(Color("PrimaryColor").opacity(0.1))
-                                .clipShape(Circle())
-                        }
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 20)
-                    
-                    // Sound Selection with glass effect
-                    VStack(spacing: 12) {
-                        Text("Background Sound")
-                            .font(.system(size: 18, weight: .semibold, design: .rounded))
-                            .foregroundColor(Color("SecondaryColor"))
-                        
-                        LazyVGrid(columns: columns, spacing: 12) {
-                            ForEach(sounds, id: \.0) { sound in
-                                Button(action: {
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                        stopMeditation()
-                                        remainingTime = selectedDuration * 60
-                                        selectedSound = sound.0
-                                        if sound.0 == "Radio" {
-                                            playRadio()
-                                        } else {
-                                            AudioPlayerManager.shared.stop()
-                                            isRadioPlaying = false
-                                        }
-                                    }
-                                }) {
-                                    VStack(spacing: 8) {
-                                        Image(systemName: sound.1)
-                                            .font(.system(size: 22, weight: .medium))
-                                            .foregroundColor(selectedSound == sound.0 ? .white : Color("PrimaryColor"))
-                                        Text(sound.0)
-                                            .font(.system(size: 13, weight: .medium, design: .rounded))
-                                            .foregroundColor(selectedSound == sound.0 ? .white : Color("PrimaryColor"))
-                                    }
-                                    .frame(height: 70)
-                                    .frame(maxWidth: .infinity)
-                                    .background(
-                                        ZStack {
-                                            if selectedSound == sound.0 {
-                                                LinearGradient(
-                                                    gradient: Gradient(colors: [
-                                                        Color("AccentColor"),
-                                                        Color("AccentColor").opacity(0.8)
-                                                    ]),
-                                                    startPoint: .topLeading,
-                                                    endPoint: .bottomTrailing
-                                                )
-                                            } else {
-                                                Color("PrimaryColor").opacity(0.08)
-                                            }
-                                            
-                                            RoundedRectangle(cornerRadius: 16)
-                                                .stroke(
-                                                    selectedSound == sound.0
-                                                    ? Color("AccentColor")
-                                                    : Color("PrimaryColor").opacity(0.1),
-                                                    lineWidth: selectedSound == sound.0 ? 1.5 : 1
-                                                )
-                                        }
-                                    )
-                                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                                    .shadow(
-                                        color: selectedSound == sound.0
-                                        ? Color("AccentColor").opacity(0.4)
-                                        : Color("PrimaryColor").opacity(0.1),
-                                        radius: selectedSound == sound.0 ? 6 : 2,
-                                        x: 0,
-                                        y: 3
-                                    )
-                                }
-                            }
-                        }
-                        .padding(.horizontal)
-                        
-                        if selectedSound == "Radio" {
-                            Text("Klassik Radio Meditation Channel")
-                                .font(.system(size: 14, weight: .medium, design: .rounded))
-                                .foregroundColor(Color("SecondaryColor"))
-                                .padding(.top, 8)
-                        }
-                    }
-                    
-                    // Timer with modern design
-                    ZStack {
-                        Circle()
-                            .stroke(Color("AccentColor").opacity(0.2), lineWidth: 4)
-                            .frame(width: 200, height: 200)
-                        
-                        Circle()
-                            .trim(from: 0, to: CGFloat(remainingTime) / CGFloat(selectedDuration * 60))
-                            .stroke(Color("AccentColor"), style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                            .frame(width: 200, height: 200)
-                            .rotationEffect(.degrees(-90))
-                            .animation(.linear, value: remainingTime)
-                        
-                        VStack(spacing: 5) {
-                            Text(timeString(from: remainingTime))
-                                .font(.system(size: 44, weight: .thin, design: .rounded))
-                                .foregroundColor(Color("PrimaryColor"))
-                                .monospacedDigit()
-                            
-                            Text(isMeditating ? "Meditating" : "Ready")
-                                .font(.system(size: 16, weight: .medium, design: .rounded))
-                                .foregroundColor(Color("SecondaryColor"))
-                        }
-                    }
-                    .padding(.vertical, 20)
-                    
-                    // Start/Stop Button with animation
-                    Button(action: {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            if isMeditating {
-                                stopMeditation()
-                            } else {
-                                startMeditation()
-                            }
-                        }
-                    }) {
-                        Image(systemName: isMeditating ? "stop.circle.fill" : "play.circle.fill")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 70, height: 70)
-                            .foregroundColor(isMeditating ? Color.red : Color("AccentColor"))
-                            .shadow(color: (isMeditating ? Color.red : Color("AccentColor")).opacity(0.3), radius: 5, x: 0, y: 3)
-                    }
-                    .padding(.bottom, 20)
-                    
-                    // Duration Selection with modern design
-                    VStack(spacing: 15) {
-                        Text("Select Duration")
-                            .font(.system(size: 20, weight: .bold, design: .rounded))
-                            .foregroundColor(Color("PrimaryColor"))
-                        
-                        LazyVGrid(columns: columns, spacing: 15) {
-                            ForEach(durations, id: \.self) { duration in
-                                Button(action: {
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                        selectedDuration = duration
-                                        remainingTime = duration * 60
-                                        isCustomDurationActive = false
-                                    }
-                                }) {
-                                    Text("\(duration) min")
-                                        .font(.system(size: 18, weight: .semibold, design: .rounded))
-                                        .foregroundColor(selectedDuration == duration && !isCustomDurationActive ? .white : Color("PrimaryColor"))
-                                        .frame(height: 50)
-                                        .frame(maxWidth: .infinity)
-                                        .background(
-                                            ZStack {
-                                                if selectedDuration == duration && !isCustomDurationActive {
-                                                    LinearGradient(
-                                                        gradient: Gradient(colors: [
-                                                            Color("AccentColor"),
-                                                            Color("AccentColor").opacity(0.8)
-                                                        ]),
-                                                        startPoint: .topLeading,
-                                                        endPoint: .bottomTrailing
-                                                    )
-                                                } else {
-                                                    Color("PrimaryColor").opacity(0.05)
-                                                }
-                                            }
-                                        )
-                                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 16)
-                                                .stroke(
-                                                    selectedDuration == duration && !isCustomDurationActive
-                                                    ? Color("AccentColor")
-                                                    : Color("PrimaryColor").opacity(0.1),
-                                                    lineWidth: selectedDuration == duration && !isCustomDurationActive ? 2 : 1
-                                                )
-                                        )
-                                        .shadow(
-                                            color: selectedDuration == duration && !isCustomDurationActive
-                                            ? Color("AccentColor").opacity(0.3)
-                                            : Color("PrimaryColor").opacity(0.05),
-                                            radius: selectedDuration == duration && !isCustomDurationActive ? 8 : 4,
-                                            x: 0,
-                                            y: 4
-                                        )
-                                }
-                            }
-                            
-                            // Custom Duration Button
-                            Button(action: {
-                                showCustomDurationAlert = true
-                            }) {
-                                HStack(spacing: 2) {
-                                    Image(systemName: "plus.circle.fill")
-                                        .font(.system(size: 14, weight: .semibold))
-                                    Text("Custom")
-                                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                                }
-                                .foregroundColor(isCustomDurationActive ? .white : Color("PrimaryColor"))
-                                .frame(height: 50)
-                                .frame(maxWidth: .infinity)
-                                .background(
-                                    ZStack {
-                                        if isCustomDurationActive {
-                                            LinearGradient(
-                                                gradient: Gradient(colors: [
-                                                    Color("AccentColor"),
-                                                    Color("AccentColor").opacity(0.8)
-                                                ]),
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            )
-                                        } else {
-                                            Color("PrimaryColor").opacity(0.05)
-                                        }
-                                    }
-                                )
-                                .clipShape(RoundedRectangle(cornerRadius: 16))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .stroke(
-                                            isCustomDurationActive
-                                            ? Color("AccentColor")
-                                            : Color("PrimaryColor").opacity(0.1),
-                                            lineWidth: isCustomDurationActive ? 2 : 1
-                                        )
-                                )
-                                .shadow(
-                                    color: isCustomDurationActive
-                                    ? Color("AccentColor").opacity(0.3)
-                                    : Color("PrimaryColor").opacity(0.05),
-                                    radius: isCustomDurationActive ? 8 : 4,
-                                    x: 0,
-                                    y: 4
-                                )
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                    .padding(.bottom, 20)
-                    .alert("Custom Duration", isPresented: $showCustomDurationAlert) {
-                        VStack(spacing: 15) {
-                            HStack(spacing: 20) {
-                                Button(action: {
-                                    if let currentDuration = Int(customDuration) {
-                                        if currentDuration > 1 {
-                                            customDuration = "\(currentDuration - 1)"
-                                        }
-                                    } else {
-                                        customDuration = "1"
-                                    }
-                                }) {
-                                    Image(systemName: "minus.circle.fill")
-                                        .font(.system(size: 32))
-                                        .foregroundColor(Color("PrimaryColor"))
-                                }
-                                
-                                TextField("Minutes", text: $customDuration)
-                                    .keyboardType(.numberPad)
-                                    .multilineTextAlignment(.center)
-                                    .font(.system(size: 32, weight: .medium))
-                                    .frame(width: 80)
-                                    .padding(.vertical, 8)
-                                    .background(Color("PrimaryColor").opacity(0.05))
-                                    .cornerRadius(10)
-                                
-                                Button(action: {
-                                    if let currentDuration = Int(customDuration) {
-                                        if currentDuration < 120 {
-                                            customDuration = "\(currentDuration + 1)"
-                                        }
-                                    } else {
-                                        customDuration = "1"
-                                    }
-                                }) {
-                                    Image(systemName: "plus.circle.fill")
-                                        .font(.system(size: 32))
-                                        .foregroundColor(Color("PrimaryColor"))
-                                }
-                            }
-                            
-                            if !customDurationError.isEmpty {
-                                Text(customDurationError)
-                                    .foregroundColor(.red)
-                                    .font(.system(size: 14))
-                            }
-                            
-                            HStack(spacing: 20) {
-                                Button("Cancel", role: .cancel) {
-                                    customDuration = ""
-                                    customDurationError = ""
-                                }
-                                .foregroundColor(Color("PrimaryColor"))
-                                
-                                Button("Set") {
-                                    if let duration = Int(customDuration), duration > 0, duration <= 120 {
-                                        selectedDuration = duration
-                                        remainingTime = duration * 60
-                                        isCustomDurationActive = true
-                                        customDuration = ""
-                                        customDurationError = ""
-                                    } else {
-                                        customDurationError = "Enter 1-120 minutes"
-                                    }
-                                }
-                                .foregroundColor(Color("AccentColor"))
-                            }
-                        }
-                        .padding()
-                    } message: {
-                        Text("Adjust meditation duration")
-                            .foregroundColor(Color("SecondaryColor"))
-                    }
-                }
+                mainMeditationView
             }
         }
-        .navigationBarBackButtonHidden(true)
-        .confirmationDialog(
-            "Turn off screen?",
-            isPresented: $showBlackoutConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button("Turn off screen") {
+        .alert("Turn off screen?", isPresented: $showBlackoutConfirmation) {
+            Button("Yes") {
                 withAnimation(.easeInOut(duration: 0.3)) {
                     isScreenBlackedOut = true
                     startClockTimer()
                 }
             }
-            Button("Cancel", role: .cancel) {}
+            Button("No", role: .cancel) {}
         } message: {
-            Text("The screen will turn black. Press the button to turn it back on.")
+            Text("This will turn off the screen to save power and reduce distractions. You can turn it back on at any time.")
         }
-        .onDisappear {
-            stopMeditation()
-            stopClockTimer()
-            audioPlayer?.stop()
-            audioPlayer = nil
+        .sheet(isPresented: $showPremiumSheet) {
+            PremiumView()
+        }
+    }
+    
+    private var mainMeditationView: some View {
+        VStack(spacing: 20) {
+            headerView
+            
+            timerDisplayView
+            
+            controlPanelView
+            
+            Spacer(minLength: 15)
+            
+            startButton
+        }
+        .padding(.horizontal)
+        .padding(.bottom, 10)
+    }
+    
+    private var headerView: some View {
+        HStack {
+            Button(action: {
+                audioPlayer?.stop()
+                AudioPlayerManager.shared.stop()
+                dismiss()
+            }) {
+                Image(systemName: "chevron.left")
+                    .font(.title2)
+                    .foregroundColor(.white)
+            }
+            .glassEffect()
+            
+            Spacer()
+            
+            Text("Meditation Timer")
+                .font(.title)
+                .fontWeight(.bold)
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [Color("PrimaryColor"), Color("AccentColor")],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+            
+            Spacer()
+            
+            Button(action: { 
+                showBlackoutConfirmation = true
+                if !isScreenBlackedOut {
+                    startClockTimer() // Start timer only when screen is about to black out
+                }
+            }) {
+                Image(systemName: "eye.slash")
+                    .font(.title2)
+                    .foregroundColor(.white)
+            }
+            .glassEffect()
+        }
+        .padding(.horizontal)
+        .padding(.top, 10)
+    }
+    
+    private var blackoutView: some View {
+        VStack(spacing: 30) {
+            Spacer()
+            
+            if isMeditating {
+                Text(timeString(from: TimeInterval(remainingTime)))
+                    .font(.system(size: 64, weight: .thin, design: .rounded))
+                    .foregroundColor(.white)
+                    .monospacedDigit()
+                
+                Text("Time Remaining")
+                    .font(.headline)
+                    .foregroundColor(.white.opacity(0.7))
+            } else {
+                Text(timeString(from: currentTime))
+                    .font(.system(size: 64, weight: .thin, design: .rounded))
+                    .foregroundColor(.white)
+                    .monospacedDigit()
+                
+                Text("The time is now")
+                    .font(.headline)
+                    .foregroundColor(.white.opacity(0.7))
+            }
+            
+            Spacer()
+            
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    isScreenBlackedOut = false
+                    stopClockTimer()
+                }
+            }) {
+                Text("Show Screen")
+                    .font(.headline)
+                    .foregroundColor(.white)
+            }
+            .glassEffect()
+        }
+        .padding(.bottom, 50)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.black.opacity(0.9))
+        .ignoresSafeArea()
+        .transition(.opacity)
+    }
+    
+    private var timerDisplayView: some View {
+        let progress = isMeditating ? Double(remainingTime) / Double(max(1, selectedDuration * 60)) : 1.0
+
+        return ZStack {
+            Circle()
+                .stroke(lineWidth: 18)
+                .opacity(0.1)
+                .foregroundColor(.white)
+
+            Circle()
+                .trim(from: 0.0, to: CGFloat(progress))
+                .stroke(style: .init(lineWidth: 18, lineCap: .round, lineJoin: .round))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [Color("PrimaryColor"), Color("AccentColor")],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .rotationEffect(Angle(degrees: -90))
+                .animation(.linear, value: progress)
+            
+            VStack(spacing: 5) {
+                Text(isMeditating ? timeString(from: TimeInterval(remainingTime)) : timeString(from: TimeInterval(selectedDuration * 60)))
+                    .font(.system(size: 48, weight: .thin, design: .rounded))
+                    .foregroundColor(.white)
+                    .monospacedDigit()
+                
+                Text(isMeditating ? "Time Remaining" : "Set Duration")
+                    .font(.headline)
+                    .textCase(.uppercase)
+                    .kerning(1.1)
+                    .foregroundColor(.white.opacity(0.7))
+            }
+        }
+        .frame(width: 220, height: 220)
+        .padding(.vertical, 20)
+    }
+    
+    private var controlPanelView: some View {
+        VStack(spacing: 20) {
+            // Sound Selection
+            VStack(spacing: 12) {
+                Text("Background Sound")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                
+                LazyVGrid(columns: columns, spacing: 10) {
+                    ForEach(sounds, id: \.0) { sound in
+                        SoundCell(
+                            soundName: sound.0,
+                            iconName: sound.1,
+                            isSelected: selectedSound == sound.0,
+                            action: {
+                                withAnimation(.spring()) {
+                                    stopMeditation()
+                                    remainingTime = selectedDuration * 60
+                                    selectedSound = sound.0
+                                    if sound.0 == "Radio" {
+                                        playRadio()
+                                    } else {
+                                        AudioPlayerManager.shared.stop()
+                                        isRadioPlaying = false
+                                    }
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+            .padding(.bottom, 15)
+            
+            // Duration Selection
+            VStack(spacing: 12) {
+                Text("Duration (minutes)")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                
+                HStack(spacing: 12) {
+                    ForEach(durations, id: \.self) { duration in
+                        let isDisabled = !userService.isPremium() && duration != 5
+                        
+                        DurationButton(
+                            duration: duration,
+                            isSelected: selectedDuration == duration && !isCustomDurationActive,
+                            isDisabled: isDisabled,
+                            action: {
+                                if isDisabled {
+                                    showPremiumSheet = true
+                                } else {
+                                    withAnimation(.spring()) {
+                                        selectedDuration = duration
+                                        isCustomDurationActive = false
+                                    }
+                                }
+                            }
+                        )
+                    }
+                    
+                    customDurationButton
+                }
+                
+                if !userService.isPremium() {
+                    Button(action: { showPremiumSheet = true }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "crown.fill")
+                                .foregroundColor(Color("AccentColor"))
+                            Text("Unlock custom and more durations with Premium")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(.white)
+                        }
+                    }
+                    .padding(.top, 10)
+                }
+            }
+        }
+        .glassCard()
+    }
+    
+    private var startButton: some View {
+        Button(action: {
+            withAnimation(.spring()) {
+                if isMeditating {
+                    stopMeditation()
+                } else {
+                    startMeditation()
+                }
+            }
+        }) {
+            Text(isMeditating ? "Stop Meditation" : "Start Meditation")
+                .font(.headline)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity)
+                .background(isMeditating ? Color.red : Color("PrimaryColor"))
+                .clipShape(Capsule())
+                .shadow(color: (isMeditating ? Color.red : Color("PrimaryColor")).opacity(0.4), radius: 8, x: 0, y: 4)
+        }
+    }
+    
+    private var customDurationButton: some View {
+        let isDisabled = !userService.isPremium()
+        
+        return Button(action: {
+            if isDisabled {
+                showPremiumSheet = true
+            } else {
+                showCustomDurationAlert = true
+            }
+        }) {
+            Image(systemName: "plus")
+                .font(.headline)
+                .foregroundColor(isCustomDurationActive ? .white : .white.opacity(0.8))
+                .frame(width: 44, height: 44)
+                .background(
+                    ZStack {
+                        if isCustomDurationActive {
+                            LinearGradient(
+                                colors: [Color("PrimaryColor"), Color("AccentColor")],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        } else {
+                            Color.white.opacity(0.1)
+                        }
+                    }
+                )
+                .clipShape(Circle())
+                .overlay(
+                    isDisabled ?
+                        Circle()
+                            .fill(Color.black.opacity(0.6))
+                            .overlay(Image(systemName: "lock.fill").foregroundColor(.white.opacity(0.7)))
+                        : nil
+                )
+        }
+        .disabled(isDisabled)
+        .shadow(
+            color: !isDisabled ? Color("AccentColor").opacity(0.6) : .clear,
+            radius: 8, x: 0, y: 4
+        )
+        .alert("Custom Duration", isPresented: $showCustomDurationAlert) {
+            TextField("Minutes", text: $customDuration)
+                .keyboardType(.numberPad)
+            Button("Set") {
+                if let duration = Int(customDuration), duration > 0 {
+                    selectedDuration = duration
+                    isCustomDurationActive = true
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+    }
+    
+    private func playSound(soundName: String) {
+        if soundName == "Radio" { return } // Radio is handled by AudioPlayerManager
+        
+        guard let url = Bundle.main.url(forResource: soundName.lowercased(), withExtension: "mp3") else {
+            print("Could not find sound file: \(soundName.lowercased()).mp3")
+            return
+        }
+        
+        do {
+            audioPlayer = try AVAudioPlayer(contentsOf: url)
+            audioPlayer?.numberOfLoops = -1
+            audioPlayer?.play()
+        } catch {
+            print("Could not play sound: \(error.localizedDescription)")
         }
     }
     
     private func startMeditation() {
         isMeditating = true
-        if remainingTime == 0 {
-            remainingTime = selectedDuration * 60
-        }
-        playSelectedSound()
+        remainingTime = selectedDuration * 60
+        playSound(soundName: selectedSound)
         
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
             if remainingTime > 0 {
                 remainingTime -= 1
             } else {
                 stopMeditation()
-                playCompletionSound()
             }
         }
     }
@@ -495,66 +431,17 @@ struct MeditationView: View {
         timer?.invalidate()
         timer = nil
         audioPlayer?.stop()
-        AudioPlayerManager.shared.player?.pause()
-        AudioPlayerManager.shared.player = nil
-        isRadioPlaying = false
+        audioPlayer = nil
     }
     
-    private func playSelectedSound() {
-        audioPlayer?.stop()
-        AudioPlayerManager.shared.player?.pause()
-        AudioPlayerManager.shared.player = nil
-        isRadioPlaying = false
-        
-        guard selectedSound != "None" else { return }
-        
-        if selectedSound == "Radio" {
-            playRadio()
-        } else {
-            // Get the correct filename based on selection
-            let fileName = selectedSound.lowercased()
-            
-            // Try to load the audio file
-            if let soundURL = Bundle.main.url(forResource: fileName, withExtension: "mp3") {
-                print("Found \(fileName).mp3 at: \(soundURL)")
-                do {
-                    audioPlayer = try AVAudioPlayer(contentsOf: soundURL)
-                    audioPlayer?.numberOfLoops = -1 // Loop indefinitely
-                    audioPlayer?.volume = 0.5 // Set volume to 50%
-                    audioPlayer?.prepareToPlay() // Prepare the audio player
-                    let success = audioPlayer?.play() ?? false
-                    print("Audio playback started: \(success)")
-                } catch {
-                    print("Error playing sound: \(error.localizedDescription)")
-                }
-            } else {
-                print("Could not find \(fileName).mp3 in the bundle")
-                // Print the bundle path for debugging
-                if let bundlePath = Bundle.main.resourcePath {
-                    print("Bundle path: \(bundlePath)")
-                }
-            }
-        }
-    }
-    
-    private func playCompletionSound() {
-        if let soundURL = Bundle.main.url(forResource: "completion", withExtension: "mp3") {
-            do {
-                let player = try AVAudioPlayer(contentsOf: soundURL)
-                player.play()
-            } catch {
-                print("Error playing completion sound: \(error.localizedDescription)")
-            }
-        }
-    }
-    
-    private func timeString(from seconds: Int) -> String {
-        let minutes = seconds / 60
-        let secs = seconds % 60
-        return String(format: "%02d:%02d", minutes, secs)
+    private func playRadio() {
+        guard let url = URL(string: radioStreamURL) else { return }
+        AudioPlayerManager.shared.playStream(url: url)
+        isRadioPlaying = true
     }
     
     private func startClockTimer() {
+        currentTime = Date()
         clockTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
             currentTime = Date()
         }
@@ -565,71 +452,109 @@ struct MeditationView: View {
         clockTimer = nil
     }
     
+    private func timeString(from time: TimeInterval) -> String {
+        let minutes = Int(time) / 60
+        let seconds = Int(time) % 60
+        return String(format: "%02d:%02d", minutes, seconds)
+    }
+    
     private func timeString(from date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
         return formatter.string(from: date)
     }
-    
-    private func playRadio() {
-        guard let url = URL(string: radioStreamURL) else {
-            print("Invalid radio stream URL")
-            return
-        }
-        
-        do {
-            let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
-            try session.setActive(true)
-            
-            let playerItem = AVPlayerItem(url: url)
-            AudioPlayerManager.shared.player = AVPlayer(playerItem: playerItem)
-            AudioPlayerManager.shared.player?.play()
-            AudioPlayerManager.shared.player?.volume = 0.5
-            isRadioPlaying = true
-        } catch {
-            print("Error playing radio stream: \(error.localizedDescription)")
-        }
-    }
 }
 
-struct YouTubePlayerView: View {
-    let videoID: String
+struct SoundCell: View {
+    let soundName: String
+    let iconName: String
+    let isSelected: Bool
+    let action: () -> Void
     
     var body: some View {
-        WebView(videoID: videoID)
-            .edgesIgnoringSafeArea(.all)
+        Button(action: action) {
+            VStack(spacing: 8) {
+                Image(systemName: iconName)
+                    .font(.title3)
+                Text(soundName)
+                    .font(.caption)
+            }
+            .foregroundColor(.white)
+            .frame(width: 60, height: 60)
+            .background(
+                ZStack {
+                    if isSelected {
+                        LinearGradient(
+                            colors: [Color("PrimaryColor"), Color("AccentColor")],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    } else {
+                        Color.white.opacity(0.1)
+                    }
+                }
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
     }
 }
 
-struct WebView: UIViewRepresentable {
+struct DurationButton: View {
+    let duration: Int
+    let isSelected: Bool
+    let isDisabled: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text("\(duration)")
+                .font(.headline)
+                .fontWeight(.bold)
+                .foregroundColor(isSelected ? .white : .white.opacity(0.8))
+                .frame(width: 44, height: 44)
+                .background(
+                    ZStack {
+                        if isSelected {
+                            LinearGradient(
+                                colors: [Color("PrimaryColor"), Color("AccentColor")],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        } else {
+                            Color.white.opacity(0.1)
+                        }
+                    }
+                )
+                .clipShape(Circle())
+                .overlay(
+                    isDisabled ?
+                        Circle()
+                            .fill(Color.black.opacity(0.6))
+                            .overlay(Image(systemName: "lock.fill").foregroundColor(.white.opacity(0.7)))
+                        : nil
+                )
+        }
+        .disabled(isDisabled)
+    }
+}
+
+struct YouTubeView: UIViewRepresentable {
     let videoID: String
     
     func makeUIView(context: Context) -> WKWebView {
         let webView = WKWebView()
-        webView.scrollView.isScrollEnabled = false
-        webView.backgroundColor = .black
+        guard let url = URL(string: "https://www.youtube.com/embed/\(videoID)") else {
+            return webView
+        }
+        let request = URLRequest(url: url)
+        webView.load(request)
         return webView
     }
     
-    func updateUIView(_ webView: WKWebView, context: Context) {
-        guard let url = URL(string: "https://www.youtube.com/embed/\(videoID)?playsinline=1&autoplay=1") else { return }
-        let request = URLRequest(url: url)
-        webView.load(request)
-    }
+    func updateUIView(_ uiView: WKWebView, context: Context) {}
 }
 
-struct MeditationView_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationView {
-            MeditationView()
-                .preferredColorScheme(.dark)
-                .environment(\.colorScheme, .dark)
-        }
-        NavigationView {
-            MeditationView()
-                .preferredColorScheme(.light)
-                .environment(\.colorScheme, .light)
-        }
-    }
+#Preview {
+    MeditationView()
+        .environmentObject(UserService.shared)
 }

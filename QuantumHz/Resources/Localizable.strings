@@ -1,0 +1,39 @@
+/* InfoView */
+"about_title" = "QuantumHz Hakkında";
+"about_what" = "QuantumHz Nedir?";
+"about_what_desc" = "QuantumHz, beyin dalgası frekanslarını kullanarak rahatlamanıza, odaklanmanıza ve daha iyi uyumanıza yardımcı olan modern bir ses terapisi ve odaklanma uygulamasıdır.";
+"about_help" = "Nasıl Yardımcı Olur?";
+"about_help_desc" = "• Odak ve verimliliği artırır\n• Derin gevşeme ve meditasyonu destekler\n• Daha hızlı uykuya dalmanıza yardımcı olur\n• Stresi ve kaygıyı azaltır\n• Farkındalık ve iyi oluşu güçlendirir";
+"about_usecases" = "Kullanım Alanları";
+"about_usecases_desc" = "- Ders çalışırken veya işte\n- Meditasyon veya yoga yaparken\n- Uykuya dalarken\n- Farkındalık molalarında\n- Sakin bir ortam yaratırken";
+"about_features" = "Özellikler";
+"about_features_desc" = "• Solfej ve beyin dalgası frekansları\n• Meditasyon zamanlayıcısı\n• Beyaz gürültü ve doğa sesleri\n• Kişisel ses oturumları\n• Premium ile tüm içeriklerin kilidi açılır";
+"about_why" = "Neden QuantumHz?";
+"about_why_desc" = "Bilimsel olarak desteklenen frekansları, güzel ve kolay kullanımlı bir arayüzle birleştirir. Daha fazla odak, huzur veya dinlendirici uyku arayan herkes için tasarlanmıştır.";
+
+/* Premium Sheet */
+"compare_plans" = "Paketleri Karşılaştır";
+"standard" = "Standart";
+"premium" = "Premium";
+"feature_first3" = "İlk 3 frekansı dinle (111, 174, 285 Hz)";
+"feature_read_all" = "Tüm frekans detaylarını oku";
+"feature_meditation" = "Meditasyon zamanlayıcısı & temel sesler";
+"feature_white_noise" = "Beyaz gürültü & temel ses oturumları";
+"feature_unlimited_freq" = "Tüm frekanslara sınırsız erişim";
+"feature_unlimited_duration" = "Sınırsız süre & özel sesler";
+"feature_full_access" = "Tüm ses oturumları & beyaz gürültüye tam erişim";
+"feature_upcoming" = "Yakında gelecek premium özellikler & güncellemeler";
+"feature_all_freq" = "Tüm frekansları dinle (sınırsız)";
+"feature_all_sessions" = "Beyaz gürültü & tüm ses oturumları";
+"feature_exclusive" = "Sınırsız süre & özel sesler";
+"feature_updates" = "Yakında gelecek premium özellikler & güncellemeler";
+"close" = "Kapat";
+"get_premium" = "Premium Al";
+"premium_subscription" = "Premium Abonelik";
+"premium_demo_message" = "Bu bir demodur. Satın alma akışınızı buraya entegre edin.";
+
+/* General */
+"your_plan" = "Paketiniz";
+"free" = "Ücretsiz";
+"upgrade_to_premium" = "Premium'a Yükselt";
+"premium_plan" = "Premium"; 

@@ -3,97 +3,194 @@ import AVFoundation
 
 struct WhiteNoiseView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var selectedSound: String = "White Noise"
-    @State private var isPlaying: Bool = false
-    @State private var volume: Float = 0.5
+    @StateObject private var audioManager = WhiteNoiseAudioManager()
     
-    private let sounds = ["White Noise", "Rain", "Ocean Waves", "Forest", "Fireplace"]
+    private let sounds: [WhiteNoiseSound] = [
+        .init(name: "Rain", icon: "cloud.rain.fill", fileName: "rain"),
+        .init(name: "Forest", icon: "leaf.fill", fileName: "forest"),
+        .init(name: "Ocean", icon: "water.waves", fileName: "ocean"),
+        .init(name: "Zen", icon: "yin.yang", fileName: "zen")
+    ]
+    
+    private let columns = [
+        GridItem(.adaptive(minimum: 150))
+    ]
     
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            // Background
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color("BackgroundColor"),
+                    Color("BackgroundColor").opacity(0.8),
+                    Color("AccentColor").opacity(0.1)
+                ]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
             
             VStack(spacing: 20) {
-                HStack {
-                    Button(action: {
-                        dismiss()
-                    }) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(width: 40, height: 40)
-                            .background(Color.white.opacity(0.1))
-                            .clipShape(Circle())
-                    }
-                    
-                    Spacer()
-                    
-                    Text("White Noise")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                    
-                    Spacer()
-                }
-                .padding(.horizontal)
+                // Header
+                headerView
                 
+                // Sound Grid
                 ScrollView {
-                    VStack(spacing: 15) {
-                        ForEach(sounds, id: \.self) { sound in
-                            SoundButton(
-                                title: sound,
-                                isSelected: selectedSound == sound,
-                                action: { selectedSound = sound }
+                    LazyVGrid(columns: columns, spacing: 20) {
+                        ForEach(sounds) { sound in
+                            SoundCard(
+                                sound: sound,
+                                isPlaying: audioManager.currentlyPlaying?.fileName == sound.fileName,
+                                action: {
+                                    audioManager.toggleSound(sound)
+                                }
                             )
                         }
                     }
-                    .padding(.horizontal)
+                    .padding()
                 }
                 
-                Spacer()
-                
-                HStack {
-                    Button(action: { isPlaying.toggle() }) {
-                        Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                            .font(.system(size: 44))
-                            .foregroundColor(.white)
-                    }
-                    
-                    Spacer()
-                    
-                    Slider(value: $volume, in: 0...1)
-                        .accentColor(.white)
+                // Volume Control
+                if audioManager.isPlaying {
+                    volumeControlView
+                        .padding(.horizontal)
+                        .padding(.bottom)
                 }
-                .padding(.horizontal)
             }
-            .padding(.vertical)
+            .padding(.top, 20)
         }
+        .onDisappear {
+            audioManager.stopAllSounds()
+        }
+    }
+    
+    private var headerView: some View {
+        HStack {
+            Button(action: { dismiss() }) {
+                Image(systemName: "chevron.left")
+                    .font(.title2)
+                    .foregroundColor(.white)
+            }
+            .glassEffect()
+            
+            Spacer()
+            
+            Text("White Noise")
+                .font(.title)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+            
+            Spacer()
+            
+            // Placeholder for right-side button if needed
+            Color.clear.frame(width: 44, height: 44)
+        }
+        .padding(.horizontal)
+    }
+    
+    private var volumeControlView: some View {
+        HStack(spacing: 15) {
+            Image(systemName: "speaker.wave.2.fill")
+                .foregroundColor(.white.opacity(0.8))
+            
+            Slider(value: $audioManager.volume, in: 0...1)
+                .accentColor(Color("PrimaryColor"))
+        }
+        .padding()
+        .glassCard()
     }
 }
 
-struct SoundButton: View {
-    let title: String
-    let isSelected: Bool
+struct SoundCard: View {
+    let sound: WhiteNoiseSound
+    let isPlaying: Bool
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
-            HStack {
-                Text(title)
-                    .foregroundColor(.white)
+            VStack(spacing: 15) {
+                Image(systemName: sound.icon)
+                    .font(.system(size: 40))
+                    .foregroundColor(isPlaying ? .white : Color("PrimaryColor"))
+                
+                Text(sound.name)
                     .font(.headline)
-                
-                Spacer()
-                
-                if isSelected {
-                    Image(systemName: "checkmark")
-                        .foregroundColor(.white)
-                }
+                    .fontWeight(.bold)
+                    .foregroundColor(isPlaying ? .white : .white.opacity(0.8))
             }
-            .padding()
-            .background(isSelected ? Color.blue.opacity(0.3) : Color.gray.opacity(0.2))
-            .cornerRadius(10)
+            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 150)
+            .background(
+                Group {
+                    if isPlaying {
+                        Color("PrimaryColor")
+                    } else {
+                        Color.clear
+                    }
+                }
+            )
+            .glassCard()
         }
+        .scaleEffect(isPlaying ? 1.05 : 1.0)
+        .animation(.spring(), value: isPlaying)
+    }
+}
+
+struct WhiteNoiseSound: Identifiable {
+    let id = UUID()
+    let name: String
+    let icon: String
+    let fileName: String
+}
+
+class WhiteNoiseAudioManager: ObservableObject {
+    @Published var isPlaying = false
+    @Published var volume: Float = 0.5 {
+        didSet {
+            player?.volume = volume
+        }
+    }
+    @Published var currentlyPlaying: WhiteNoiseSound?
+    
+    private var player: AVAudioPlayer?
+    
+    func toggleSound(_ sound: WhiteNoiseSound) {
+        if currentlyPlaying?.id == sound.id {
+            // Stop the currently playing sound
+            stopAllSounds()
+        } else {
+            // Play the new sound
+            playSound(sound)
+        }
+    }
+    
+    private func playSound(_ sound: WhiteNoiseSound) {
+        guard let url = Bundle.main.url(forResource: sound.fileName, withExtension: "mp3") else {
+            print("Could not find sound file: \(sound.fileName).mp3")
+            return
+        }
+        
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+            try AVAudioSession.sharedInstance().setActive(true)
+            
+            player = try AVAudioPlayer(contentsOf: url)
+            player?.numberOfLoops = -1
+            player?.volume = volume
+            player?.play()
+            
+            isPlaying = true
+            currentlyPlaying = sound
+        } catch {
+            print("Failed to play sound: \(error.localizedDescription)")
+            stopAllSounds()
+        }
+    }
+    
+    func stopAllSounds() {
+        player?.stop()
+        player = nil
+        isPlaying = false
+        currentlyPlaying = nil
     }
 }
 

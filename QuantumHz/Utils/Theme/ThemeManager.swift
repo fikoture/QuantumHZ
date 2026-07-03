@@ -9,6 +9,12 @@ struct AppTheme {
         static let accent = Color("AccentColor")         // Pink (#FF66C4)
         static let textPrimary = Color.white
         static let textSecondary = Color.gray
+        
+        // Glass effect colors
+        static let glassBackground = Color.white.opacity(0.15)
+        static let glassBorder = Color.white.opacity(0.25)
+        static let glassHighlight = Color.white.opacity(0.1)
+        static let glassShadow = Color.black.opacity(0.2)
     }
     
     // Fonts
@@ -44,6 +50,15 @@ struct AppTheme {
                 y: sizeClass == .regular ? 8 : 5
             )
         }
+        
+        // Glass effect styles
+        static func glassEffect(for sizeClass: UserInterfaceSizeClass?) -> some ViewModifier {
+            GlassEffectModifier(sizeClass: sizeClass ?? .compact)
+        }
+        
+        static func glassCard(for sizeClass: UserInterfaceSizeClass?) -> some ViewModifier {
+            GlassCardModifier(sizeClass: sizeClass ?? .compact)
+        }
     }
 }
 
@@ -53,6 +68,44 @@ struct ShadowStyle {
     var radius: CGFloat
     var x: CGFloat
     var y: CGFloat
+}
+
+// Glass Effect Modifiers
+struct GlassEffectModifier: ViewModifier {
+    let sizeClass: UserInterfaceSizeClass
+    
+    func body(content: Content) -> some View {
+        content
+            .padding(10) // Reduce padding for smaller buttons
+            .background(
+                Circle()
+                    .fill(AppTheme.Colors.glassBackground.opacity(0.1))
+                    .background(.ultraThinMaterial)
+                    .clipShape(Circle())
+            )
+            .overlay(
+                Circle()
+                    .stroke(AppTheme.Colors.glassBorder.opacity(0.5), lineWidth: 0.5)
+            )
+            .shadow(color: AppTheme.Colors.glassShadow.opacity(0.5), radius: 5, x: 0, y: 3)
+    }
+}
+
+struct GlassCardModifier: ViewModifier {
+    let sizeClass: UserInterfaceSizeClass
+    
+    func body(content: Content) -> some View {
+        content
+            .padding(AppTheme.Styles.padding(for: sizeClass))
+            .background(AppTheme.Colors.glassBackground)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.Styles.cornerRadius(for: sizeClass)))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.Styles.cornerRadius(for: sizeClass))
+                    .stroke(AppTheme.Colors.glassBorder, lineWidth: 0.5)
+            )
+            .shadow(color: AppTheme.Colors.glassShadow, radius: 15, x: 0, y: 8)
+    }
 }
 
 // Theme Manager
@@ -90,5 +143,25 @@ class ThemeManager {
         AppTheme.Styles.shadow(for: sizeClass)
     }
     
+    // Glass effect modifiers
+    func glassEffect(for sizeClass: UserInterfaceSizeClass?) -> some ViewModifier {
+        AppTheme.Styles.glassEffect(for: sizeClass)
+    }
+    
+    func glassCard(for sizeClass: UserInterfaceSizeClass?) -> some ViewModifier {
+        AppTheme.Styles.glassCard(for: sizeClass)
+    }
+    
     private init() {}
+}
+
+// View Extensions
+extension View {
+    func glassEffect(for sizeClass: UserInterfaceSizeClass? = nil) -> some View {
+        modifier(AppTheme.Styles.glassEffect(for: sizeClass))
+    }
+    
+    func glassCard(for sizeClass: UserInterfaceSizeClass? = nil) -> some View {
+        modifier(AppTheme.Styles.glassCard(for: sizeClass))
+    }
 }

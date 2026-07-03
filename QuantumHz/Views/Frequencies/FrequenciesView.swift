@@ -14,6 +14,11 @@ class AudioPlayer {
     private var audioPlayer: AVAudioPlayer?
     private var currentFrequency: Int?
     
+    deinit {
+        // Automatically stop the player when the view is dismissed
+        self.stop()
+    }
+    
     func play(frequency: Int, volume: Float) {
         // Get the filename based on frequency
         let filename: String
@@ -188,7 +193,7 @@ struct FrequenciesView: View {
     
     var body: some View {
         ZStack {
-            // Modern animated background
+            // Modern animated background with blur
             LinearGradient(
                 gradient: Gradient(colors: [
                     Color("BackgroundColor"),
@@ -200,883 +205,229 @@ struct FrequenciesView: View {
                 endPoint: .bottom
             )
             .ignoresSafeArea()
+            .blur(radius: animateBackground ? 30 : 0)
+            .animation(.easeInOut(duration: 2).repeatForever(autoreverses: true), value: animateBackground)
             
-            // Animated background circles
-            ZStack {
-                ForEach(0..<3) { index in
-                    Circle()
-                        .fill(
+            // Content
+            VStack(spacing: 20) {
+                // Header with glass effect
+                HStack {
+                    Button(action: {
+                        dismiss()
+                    }) {
+                        Image(systemName: "chevron.left")
+                            .font(.headline)
+                            .frame(width: 20, height: 20)
+                            .foregroundColor(.white)
+                    }
+                    .glassEffect()
+                    
+                    Spacer()
+                    
+                    Text("Frequencies")
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .foregroundStyle(
                             LinearGradient(
-                                gradient: Gradient(colors: [
-                                    Color("AccentColor").opacity(0.15),
-                                    Color("PrimaryColor").opacity(0.1)
-                                ]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+                                colors: [Color("PrimaryColor"), Color("AccentColor")],
+                                startPoint: .leading,
+                                endPoint: .trailing
                             )
                         )
-                        .frame(width: 250 + CGFloat(index * 60))
-                        .blur(radius: 30)
-                        .offset(
-                            x: animateBackground ? CGFloat.random(in: -150...150) : 0,
-                            y: animateBackground ? CGFloat.random(in: -150...150) : 0
-                        )
-                        .animation(
-                            Animation.easeInOut(duration: 10)
-                                .repeatForever(autoreverses: true)
-                                .delay(Double(index) * 2),
-                            value: animateBackground
-                        )
-                }
-            }
-            .ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                // Professional modern header
-                VStack(spacing: 0) {
-                    HStack(spacing: 16) {
-                        // Clean back button
-                        Button(action: {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                isBackButtonPressed = true
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                    isBackButtonPressed = false
-                                    dismiss()
-                                }
-                            }
-                        }) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundColor(Color("PrimaryColor"))
-                                .frame(width: 44, height: 44)
-                                .background(.ultraThinMaterial)
-                                .clipShape(Circle())
-                                .overlay(
-                                    Circle()
-                                        .stroke(Color("PrimaryColor").opacity(0.3), lineWidth: 0.5)
-                                )
-                        }
-                        .scaleEffect(isBackButtonPressed ? 0.9 : 1.0)
-                        
-                        Spacer()
-                        
-                        // Clean title design
-                        VStack(spacing: 2) {
-                            Text("Solfeggio")
-                                .font(.system(size: 26, weight: .bold, design: .rounded))
-                                .foregroundColor(Color("PrimaryColor"))
-                            
-                            Text("Frequencies")
-                                .font(.system(size: 26, weight: .bold, design: .rounded))
-                                .foregroundColor(Color("PrimaryColor"))
-                        }
-                        .frame(maxWidth: .infinity)
-                        
-                        Spacer()
-                        
-                        // Invisible spacer
-                        Color.clear
-                            .frame(width: 44, height: 44)
+                    
+                    Spacer()
+                    
+                    Button(action: { showInfo.toggle() }) {
+                        Image(systemName: "info")
+                            .font(.headline)
+                            .frame(width: 20, height: 20)
+                            .foregroundColor(.white)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 16)
-                    .padding(.bottom, 20)
+                    .glassEffect()
                 }
-                .background(
-                    RoundedRectangle(cornerRadius: 25)
-                        .fill(.ultraThinMaterial)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 25)
-                                .stroke(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [
-                                            Color("PrimaryColor").opacity(0.3),
-                                            Color("AccentColor").opacity(0.2)
-                                        ]),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    lineWidth: 1
-                                )
-                        )
-                )
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
+                .padding(.horizontal)
+                .padding(.vertical)
                 
-                // Modern frequency grid
                 ScrollView {
-                    VStack(spacing: 20) {
-                        LazyVGrid(columns: [
-                            GridItem(.flexible(), spacing: 10),
-                            GridItem(.flexible(), spacing: 10)
-                        ], spacing: 10) {
-                            ForEach(Array(frequencies.enumerated()), id: \ .element.id) { index, frequency in
-                                FrequencyButton(frequency: frequency, index: index) {
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                        selectedFrequency = frequency
-                                    }
-                                }
-                                .environmentObject(userService)
-                            }
-                        }
-                        
-                        // Large Info Button
-                        Button(action: {
-                            showInfo = true
-                        }) {
-                            HStack(spacing: 12) {
-                                Image(systemName: "info.circle.fill")
-                                    .font(.system(size: 24, weight: .semibold))
-                                    .foregroundColor(.white)
-                                
-                                Text("Learn About Solfeggio Frequencies")
-                                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                                    .foregroundColor(.white)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [
-                                        Color("AccentColor"),
-                                        Color("PrimaryColor")
-                                    ]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
+                    LazyVGrid(columns: [
+                        GridItem(.flexible(), spacing: 16),
+                        GridItem(.flexible(), spacing: 16)
+                    ], spacing: 16) {
+                        ForEach(frequencies) { frequency in
+                            FrequencyCard(
+                                frequency: frequency,
+                                isSelected: selectedFrequency?.id == frequency.id,
+                                isPlaying: audioPlayer.isPlaying && selectedFrequency?.id == frequency.id,
+                                isPremium: frequency.hz > 285,
+                                userIsPremium: userService.isPremium()
                             )
-                            .cornerRadius(16)
-                            .shadow(color: Color("AccentColor").opacity(0.3), radius: 8, x: 0, y: 4)
+                            .onTapGesture {
+                                handleFrequencyTap(frequency)
+                            }
                         }
                     }
-                    .padding(.horizontal)
-                    .padding(.top, 20)
+                    .padding()
+                }
+                
+                if let selectedFrequency = selectedFrequency {
+                    // Player controls with glass effect
+                    VStack(spacing: 16) {
+                        // Frequency info
+                        VStack(alignment: .center, spacing: 8) {
+                            Text("\(selectedFrequency.hz) Hz")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                            
+                            Text(selectedFrequency.title)
+                                .font(.headline)
+                                .foregroundColor(.white.opacity(0.8))
+                        }
+                        
+                        // Audio visualizer
+                        if audioPlayer.isPlaying {
+                            AudioVisualizer(frequency: selectedFrequency.hz)
+                                .frame(height: 60)
+                        }
+                        
+                        // Volume slider
+                        HStack {
+                            Image(systemName: "speaker.fill")
+                                .foregroundColor(.white)
+                            
+                            Slider(value: $volume, in: 0...1) { _ in
+                                audioPlayer.setVolume(volume)
+                            }
+                            .accentColor(Color("PrimaryColor"))
+                            
+                            Image(systemName: "speaker.wave.3.fill")
+                                .foregroundColor(.white)
+                        }
+                        .padding(.horizontal)
+                        
+                        // Play/Stop button
+                        Button(action: {
+                            if audioPlayer.isPlaying {
+                                audioPlayer.stop()
+                            } else {
+                                audioPlayer.play(frequency: selectedFrequency.hz, volume: volume)
+                            }
+                        }) {
+                            Image(systemName: audioPlayer.isPlaying ? "stop.circle.fill" : "play.circle.fill")
+                                .font(.system(size: 54))
+                                .foregroundColor(Color("PrimaryColor"))
+                        }
+                    }
+                    .padding()
+                    .glassCard()
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
         }
+        .animation(.spring(), value: selectedFrequency?.id)
         .onAppear {
             animateBackground = true
         }
-        .fullScreenCover(item: $selectedFrequency) { frequency in
-            FrequencyDetailView(frequency: frequency, audioPlayer: audioPlayer)
-        }
         .sheet(isPresented: $showInfo) {
-            ZStack {
-                ThemeManager.shared.backgroundColor.ignoresSafeArea()
-                ScrollView {
-                    VStack(spacing: 28) {
-                        HStack {
-                            Spacer()
-                            Text("What Are Solfeggio Frequencies?")
-                                .font(.system(size: 26, weight: .bold, design: .rounded))
-                                .foregroundColor(ThemeManager.shared.primaryColor)
-                                .multilineTextAlignment(.center)
-                            Spacer()
-                            Button(action: { showInfo = false }) {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 20, weight: .semibold))
-                                    .foregroundColor(.white)
-                                    .frame(width: 40, height: 40)
-                                    .background(Color.white.opacity(0.08))
-                                    .clipShape(Circle())
-                                    .overlay(
-                                        Circle().stroke(ThemeManager.shared.primaryColor.opacity(0.2), lineWidth: 1)
-                                    )
-                            }
-                        }
-                        .padding(.horizontal)
-                        
-                        // Ana açıklama kartı
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Solfeggio frequencies are ancient sound tones believed to have existed for thousands of years, based on specific mathematical patterns. While modern scientific research has not yet provided conclusive evidence about the effects of these frequencies, there is a widespread belief that listening to these frequencies supports mental, emotional, physical, and spiritual well-being.")
-                                .font(.system(size: 16, weight: .regular, design: .rounded))
-                                .foregroundColor(.white.opacity(0.92))
-                        }
-                        .padding(18)
-                        .background(ThemeManager.shared.primaryColor.opacity(0.08))
-                        .cornerRadius(18)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 18)
-                                .stroke(ThemeManager.shared.primaryColor.opacity(0.13), lineWidth: 1)
-                        )
-                        // Bilgi kutuları
-                        InfoCard(title: "Emotional and Mental Balance", text: "• Stress and Anxiety Reduction: Many frequencies are thought to have calming and relaxing effects, which may help reduce stress and anxiety.\n• Clearing Emotional Blockages: Certain frequencies (e.g., 396 Hz) are believed to help resolve negative emotional patterns such as fear and guilt.\n• Mental Clarity and Focus: By calming the mind and reducing distractions, they may enhance concentration and mental clarity.")
-                        InfoCard(title: "Physical Healing and Health", text: "• Cellular Repair and Renewal: The 528 Hz frequency, in particular, is associated with 'DNA repair' and is believed to support healing at the cellular level.\n• Pain Reduction: Some low frequencies (e.g., 174 Hz) are believed to have analgesic and soothing effects.\n• Immune System Support: There are claims that certain frequencies help strengthen the immune system.")
-                        InfoCard(title: "Spiritual Growth and Awakening", text: "• Intuition and Wisdom Development: Higher frequencies (e.g., 852 Hz) are believed to enhance intuitive abilities and inner wisdom.\n• Spiritual Connection: Frequencies like 963 Hz are thought to strengthen the individual's connection with higher consciousness or universal energy.\n• Awareness and Meditation Depth: These frequencies may help deepen meditation practices and facilitate easier access to deeper states.")
-                        InfoCard(title: "Relationships and Harmony", text: "Frequencies like 639 Hz are believed to strengthen relationships by promoting love, understanding, and empathy in interpersonal connections.")
-                        // Önemli not kartı
-                        VStack(alignment: .leading, spacing: 10) {
-                            HStack(spacing: 8) {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundColor(.yellow)
-                                Text("Important Note")
-                                    .font(.system(size: 17, weight: .bold, design: .rounded))
-                                    .foregroundColor(ThemeManager.shared.secondaryColor)
-                            }
-                            Text("The benefits of Solfeggio frequencies are generally based on anecdotal evidence, traditional beliefs, and personal experiences. There is limited definitive clinical evidence widely accepted by modern Western medicine or scientific research. These frequencies should not replace medical treatments or professional support. However, many people experience that listening to these sounds contributes to their overall well-being and relaxation.")
-                                .font(.system(size: 15, weight: .regular, design: .rounded))
-                                .foregroundColor(.white.opacity(0.85))
-                        }
-                        .padding(16)
-                        .background(Color.yellow.opacity(0.08))
-                        .cornerRadius(16)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(Color.yellow.opacity(0.18), lineWidth: 1)
-                        )
-                        .padding(.bottom, 12)
-                    }
-                    .padding(.vertical, 18)
-                    .padding(.horizontal, 8)
-                }
-            }
-        }
-    }
-}
-
-struct FrequencyButton: View {
-    let frequency: Frequency
-    let index: Int
-    let action: () -> Void
-    @State private var isPressed = false
-    @State private var showPremiumSheet = false
-    @EnvironmentObject private var userService: UserService
-    @Environment(\.colorScheme) private var colorScheme
-    
-    var body: some View {
-        ZStack(alignment: .topTrailing) {
-            Button(action: {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    isPressed = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        isPressed = false
-                        action()
-                    }
-                }
-            }) {
-                VStack(spacing: 6) {
-                    Image(systemName: frequency.icon)
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundColor(.white)
-                        .frame(width: 35, height: 35)
-                        .background(
-                            Circle()
-                                .fill(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [
-                                            Color("AccentColor"),
-                                            Color("PrimaryColor")
-                                        ]),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                        )
-                        .shadow(color: Color("AccentColor").opacity(0.3),
-                               radius: 4, x: 0, y: 2)
-                    
-                    VStack(spacing: 1) {
-                        Text("\(frequency.hz) Hz")
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
-                            .foregroundColor(.white)
-                        
-                        Text(frequency.note)
-                            .font(.system(size: 10, weight: .medium, design: .rounded))
-                            .foregroundColor(.white.opacity(0.7))
-                    }
-                    // Sadece standart kullanıcılar ve premium frekanslar için buton
-                    if index > 2 && !userService.isPremium() {
-                        Button(action: { showPremiumSheet = true }) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "star.fill")
-                                    .foregroundColor(.yellow)
-                                Text("Upgrade to Premium")
-                                    .font(.system(size: 13, weight: .semibold))
-                            }
-                            .foregroundColor(.white)
-                            .padding(.vertical, 6)
-                            .padding(.horizontal, 10)
-                            .background(Color("AccentColor"))
-                            .cornerRadius(8)
-                            .padding(.top, 6)
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(.ultraThinMaterial)
-                .cornerRadius(12)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                )
-                .shadow(
-                    color: isPressed ? Color("AccentColor").opacity(0.3) : Color.black.opacity(0.2),
-                    radius: isPressed ? 4 : 2,
-                    x: 0,
-                    y: isPressed ? 2 : 1
-                )
-                .scaleEffect(isPressed ? 0.95 : 1.0)
-            }
-            // Yıldız ikonu
-            if index > 2 && !userService.isPremium() {
-                Image(systemName: "star.fill")
-                    .foregroundColor(.yellow)
-                    .font(.system(size: 18, weight: .bold))
-                    .padding(6)
-            }
+            FrequencyInfoView()
+                .preferredColorScheme(.dark)
         }
         .sheet(isPresented: $showPremiumSheet) {
-            VStack(spacing: 24) {
-                Image(systemName: "star.fill")
-                    .font(.system(size: 40))
-                    .foregroundColor(.yellow)
-                Text("Upgrade to Premium to listen to all frequencies!")
-                    .font(.title3.bold())
-                    .multilineTextAlignment(.center)
-                    .foregroundColor(Color("PrimaryColor"))
-                Button("Close") { showPremiumSheet = false }
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .padding(.vertical, 10)
-                    .padding(.horizontal, 32)
-                    .background(Color("AccentColor"))
-                    .cornerRadius(14)
-            }
-            .padding(32)
+            PremiumView()
+                .preferredColorScheme(.dark)
+        }
+    }
+    
+    private func handleFrequencyTap(_ frequency: Frequency) {
+        if frequency.hz > 285 && !userService.isPremium() {
+            showPremiumSheet = true
+            return
+        }
+        
+        if selectedFrequency?.id == frequency.id {
+            // Deselect and stop if the same frequency is tapped again
+            selectedFrequency = nil
+            audioPlayer.stop()
+        } else {
+            selectedFrequency = frequency
+            audioPlayer.play(frequency: frequency.hz, volume: volume)
         }
     }
 }
 
-struct FrequencyDetailView: View {
+struct FrequencyCard: View {
     let frequency: Frequency
-    let audioPlayer: AudioPlayer
-    @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var userService: UserService
-    @State private var isPlaying = false
-    @State private var volume: Float = 0.5
-    @State private var remainingTime: Int = 600
-    @State private var timer: Timer?
-    @State private var isScreenBlackedOut = false
-    @State private var showBlackoutConfirmation = false
-    @State private var selectedDuration: Int = 10
-    @State private var showCustomDurationAlert = false
-    @State private var customDuration = ""
-    @State private var customDurationError = ""
-    @State private var isCustomDurationActive = false
-    @State private var isBackButtonPressed = false
-    @State private var showInfo = false
-    @State private var showPremiumSheet = false
-    
-    private let durations = [10, 15]
-    private let columns = [
-        GridItem(.flexible()),
-        GridItem(.flexible()),
-        GridItem(.flexible())
-    ]
-    
-    private var timeString: String {
-        let minutes = remainingTime / 60
-        let seconds = remainingTime % 60
-        return String(format: "%02d:%02d", minutes, seconds)
-    }
+    let isSelected: Bool
+    let isPlaying: Bool
+    let isPremium: Bool
+    let userIsPremium: Bool
     
     var body: some View {
-        ZStack {
-            backgroundView
-            mainContentView
-        }
-        .confirmationDialog(
-            "Turn off screen?",
-            isPresented: $showBlackoutConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button("Turn off screen") {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    isScreenBlackedOut = true
-                }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("The screen will turn off. Tap anywhere to turn it back on.")
-        }
-        .onTapGesture {
-            if isScreenBlackedOut {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    isScreenBlackedOut = false
-                }
-            }
-        }
-        .overlay(
-            Group {
-                if isScreenBlackedOut {
-                    ZStack {
-                        Color.black
-                            .ignoresSafeArea()
-                            .transition(.opacity)
-                        
-                        VStack(spacing: 30) {
-                            // Clock
-                            VStack(spacing: 8) {
-                                Text(timeString)
-                                    .font(.system(size: 60, weight: .light, design: .rounded))
-                                    .foregroundColor(.white)
-                                    .monospacedDigit()
-                                
-                                if isPlaying {
-                                    Text("Playing \(frequency.hz) Hz")
-                                        .font(.system(size: 16, weight: .medium, design: .rounded))
-                                        .foregroundColor(.white.opacity(0.7))
-                                }
-                            }
-                            
-                            // Back button
-                            Button(action: {
-                                withAnimation(.easeInOut(duration: 0.3)) {
-                                    isScreenBlackedOut = false
-                                }
-                            }) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "chevron.left")
-                                        .font(.system(size: 16, weight: .semibold))
-                                    Text("Back")
-                                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                }
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 12)
-                                .background(.ultraThinMaterial)
-                                .clipShape(Capsule())
-                                .overlay(
-                                    Capsule()
-                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                                )
-                            }
-                        }
-                    }
-                    .transition(.opacity)
-                }
-            }
-        )
-        .onDisappear {
-            audioPlayer.stop()
-            timer?.invalidate()
-            timer = nil
-        }
-    }
-    
-    private var backgroundView: some View {
-        LinearGradient(
-            gradient: Gradient(colors: [
-                Color("BackgroundColor"),
-                Color("BackgroundColor").opacity(0.9),
-                Color("BackgroundColor").opacity(0.8),
-                Color("AccentColor").opacity(0.3)
-            ]),
-            startPoint: .top,
-            endPoint: .bottom
-        )
-        .ignoresSafeArea()
-    }
-    
-    private var mainContentView: some View {
-        ScrollView {
-            VStack(spacing: 15) {
-                headerView
-                iconView
-                controlsView
-                playerControlsView
-                durationSelectorView
-                timerView
-            }
-            .padding(.horizontal)
-        }
-    }
-    
-    private var headerView: some View {
-        HStack(spacing: 16) {
-            backButton
+        VStack(alignment: .center, spacing: 8) {
             Spacer()
-            titleView
+            
+            Image(systemName: frequency.icon)
+                .font(.title)
+                .foregroundColor(isSelected ? Color("PrimaryColor") : .white)
+                .frame(height: 30)
+            
             Spacer()
-            actionButtons
-        }
-        .padding(.horizontal)
-        .padding(.top, 20)
-    }
-    
-    private var backButton: some View {
-        Button(action: {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                isBackButtonPressed = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    isBackButtonPressed = false
-                    dismiss()
-                }
-            }
-        }) {
-            Image(systemName: "chevron.left")
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(Color("PrimaryColor"))
-                .frame(width: 40, height: 40)
-                .background(Color("PrimaryColor").opacity(0.1))
-                .clipShape(Circle())
-        }
-        .scaleEffect(isBackButtonPressed ? 0.95 : 1.0)
-    }
-    
-    private var titleView: some View {
-        VStack(spacing: 2) {
-            Text("Solfeggio")
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundColor(Color("PrimaryColor"))
-            Text("Frequencies")
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundColor(Color("PrimaryColor"))
-        }
-        .shadow(color: Color("AccentColor").opacity(0.3), radius: 2, x: 0, y: 2)
-        .frame(maxWidth: .infinity)
-    }
-    
-    private var actionButtons: some View {
-        Button(action: {
-            showBlackoutConfirmation = true
-        }) {
-            Image(systemName: "moon.fill")
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(Color("PrimaryColor"))
-                .frame(width: 40, height: 40)
-                .background(Color("PrimaryColor").opacity(0.1))
-                .clipShape(Circle())
-        }
-    }
-    
-    private var iconView: some View {
-        Image(systemName: frequency.icon)
-            .font(.system(size: 50))
-            .foregroundColor(Color("PrimaryColor"))
-            .frame(width: 100, height: 100)
-            .background(
-                Circle()
-                    .fill(Color("PrimaryColor").opacity(0.1))
-            )
-            .shadow(color: Color("AccentColor").opacity(0.3),
-                   radius: 15, x: 0, y: 10)
-    }
-    
-    private var controlsView: some View {
-        VStack(spacing: 15) {
-            Text(frequency.title)
-                .font(.system(size: 24, weight: .bold, design: .rounded))
+            
+            Text("\(frequency.hz) Hz")
+                .font(.headline)
+                .fontWeight(.bold)
                 .foregroundColor(.white)
             
-            Text(frequency.description)
-                .font(.system(size: 16, weight: .medium, design: .rounded))
-                .foregroundColor(.white.opacity(0.7))
+            Text(frequency.title)
+                .font(.caption)
+                .foregroundColor(.white.opacity(0.8))
                 .multilineTextAlignment(.center)
-                .padding(.horizontal)
             
-            // Eğer kullanıcı premium değilse ve bu premium bir frekanssa, bilgi altında buton göster
-            if !userService.isPremium() && ![111, 174, 285].contains(frequency.hz) {
-                Button(action: { showPremiumSheet = true }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "star.fill")
-                            .foregroundColor(.yellow)
-                        Text("Upgrade to Premium")
-                            .font(.system(size: 16, weight: .semibold))
-                    }
-                    .foregroundColor(.white)
-                    .padding(.vertical, 10)
-                    .padding(.horizontal, 24)
-                    .background(Color("AccentColor"))
-                    .cornerRadius(12)
-                    .padding(.top, 8)
-                }
-            }
-        }
-        .padding(.vertical, 20)
-        .sheet(isPresented: $showPremiumSheet) {
-            VStack(spacing: 24) {
-                Image(systemName: "star.fill")
-                    .font(.system(size: 40))
-                    .foregroundColor(.yellow)
-                Text("Upgrade to Premium to listen to all frequencies!")
-                    .font(.title3.bold())
-                    .multilineTextAlignment(.center)
-                    .foregroundColor(Color("PrimaryColor"))
-                Button("Close") { showPremiumSheet = false }
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .padding(.vertical, 10)
-                    .padding(.horizontal, 32)
-                    .background(Color("AccentColor"))
-                    .cornerRadius(14)
-            }
-            .padding(32)
-        }
-    }
-    
-    private var playerControlsView: some View {
-        VStack(spacing: 15) {
-            volumeControlView
+            Spacer()
             
-            playButton
-        }
-        .padding(.vertical, 20)
-    }
-    
-    private var volumeControlView: some View {
-        HStack(spacing: 20) {
-            Button(action: {
-                if volume > 0.1 {
-                    volume -= 0.1
-                    audioPlayer.setVolume(volume)
-                }
-            }) {
-                Image(systemName: "speaker.fill")
-                    .font(.system(size: 20))
-                    .foregroundColor(.white.opacity(0.7))
-            }
-            
-            Slider(value: $volume, in: 0...1)
-                .accentColor(Color("AccentColor"))
-                .onChange(of: volume) { newValue in
-                    audioPlayer.setVolume(newValue)
-                }
-            
-            Button(action: {
-                if volume < 0.9 {
-                    volume += 0.1
-                    audioPlayer.setVolume(volume)
-                }
-            }) {
-                Image(systemName: "speaker.wave.3.fill")
-                    .font(.system(size: 20))
-                    .foregroundColor(.white.opacity(0.7))
-            }
-        }
-        .padding(.horizontal)
-    }
-    
-    private var playButton: some View {
-        let allowedFrequencies = [111, 174, 285]
-        let isAllowed = userService.isPremium() || allowedFrequencies.contains(frequency.hz)
-        return Group {
-            if isAllowed {
-                Button(action: {
-                    isPlaying.toggle()
-                    if isPlaying {
-                        audioPlayer.play(frequency: frequency.hz, volume: volume)
-                        startTimer()
-                    } else {
-                        audioPlayer.stop()
-                        timer?.invalidate()
-                        timer = nil
-                    }
-                }) {
-                    Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                        .font(.system(size: 60))
-                        .foregroundColor(Color("AccentColor"))
-                }
-            } else {
-                VStack(spacing: 12) {
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 48))
-                        .foregroundColor(.yellow)
-                        .padding(8)
-                        .background(Circle().fill(Color.gray.opacity(0.15)))
-                    Text("Upgrade to Premium to listen to this frequency.")
-                        .font(.headline)
-                        .foregroundColor(Color("AccentColor"))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                }
-            }
-        }
-    }
-    
-    private var durationSelectorView: some View {
-        Group {
-            if !isPlaying {
-                VStack(spacing: 15) {
-                    Text("Select Duration")
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
-                    
-                    LazyVGrid(columns: columns, spacing: 15) {
-                        ForEach(durations, id: \.self) { duration in
-                            durationButton(duration)
-                        }
-                        
-                        customDurationButton
-                    }
-                    .padding(.horizontal)
-                }
-                .padding(.bottom, 20)
-            }
-        }
-    }
-    
-    private func durationButton(_ duration: Int) -> some View {
-        Button(action: {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                selectedDuration = duration
-                isCustomDurationActive = false
-            }
-        }) {
-            Text("\(duration) min")
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
-                .foregroundColor(selectedDuration == duration && !isCustomDurationActive ? .white : Color("PrimaryColor"))
-                .frame(height: 40)
-                .frame(maxWidth: .infinity)
-                .background(
-                    ZStack {
-                        if selectedDuration == duration && !isCustomDurationActive {
-                            LinearGradient(
-                                gradient: Gradient(colors: [
-                                    Color("AccentColor"),
-                                    Color("AccentColor").opacity(0.8)
-                                ]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        } else {
-                            Color("PrimaryColor").opacity(0.05)
-                        }
-                    }
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(
-                            selectedDuration == duration && !isCustomDurationActive
-                            ? Color("AccentColor")
-                            : Color("PrimaryColor").opacity(0.1),
-                            lineWidth: selectedDuration == duration && !isCustomDurationActive ? 2 : 1
-                        )
-                )
-                .shadow(
-                    color: selectedDuration == duration && !isCustomDurationActive
-                    ? Color("AccentColor").opacity(0.3)
-                    : Color("PrimaryColor").opacity(0.05),
-                    radius: selectedDuration == duration && !isCustomDurationActive ? 8 : 4,
-                    x: 0,
-                    y: 4
-                )
-        }
-    }
-    
-    private var customDurationButton: some View {
-        Button(action: {
-            showCustomDurationAlert = true
-        }) {
-            HStack(spacing: 2) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 14, weight: .semibold))
-                Text("Custom")
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-            }
-            .foregroundColor(isCustomDurationActive ? .white : Color("PrimaryColor"))
-            .frame(height: 40)
-            .frame(maxWidth: .infinity)
-            .background(
-                ZStack {
-                    if isCustomDurationActive {
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                Color("AccentColor"),
-                                Color("AccentColor").opacity(0.8)
-                            ]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    } else {
-                        Color("PrimaryColor").opacity(0.05)
-                    }
-                }
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(
-                        isCustomDurationActive
-                        ? Color("AccentColor")
-                        : Color("PrimaryColor").opacity(0.1),
-                        lineWidth: isCustomDurationActive ? 2 : 1
-                    )
-            )
-            .shadow(
-                color: isCustomDurationActive
-                ? Color("AccentColor").opacity(0.3)
-                : Color("PrimaryColor").opacity(0.05),
-                radius: isCustomDurationActive ? 8 : 4,
-                x: 0,
-                y: 4
-            )
-        }
-    }
-    
-    private var timerView: some View {
-        Group {
+            // Playing indicator
             if isPlaying {
-                VStack(spacing: 4) {
-                    Text(timeString)
-                        .font(.system(size: 40, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
-                        .monospacedDigit()
-                    
-                    Text("Recommended listening time")
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .foregroundColor(.white.opacity(0.7))
-                }
-                .padding(.vertical, 5)
-            }
-        }
-    }
-    
-    private func startTimer() {
-        remainingTime = selectedDuration * 60
-        timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-            if remainingTime > 0 {
-                remainingTime -= 1
+                LinearGradient(
+                    gradient: Gradient(colors: [Color("PrimaryColor"), Color("AccentColor")]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .frame(height: 3)
+                .clipShape(Capsule())
             } else {
-                timer?.invalidate()
-                timer = nil
-                isPlaying = false
-                audioPlayer.stop()
+                Color.clear.frame(height: 3)
             }
         }
+        .padding(12)
+        .frame(height: 150)
+        .background(AppTheme.Colors.glassBackground)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .overlay(
+            ZStack(alignment: .topTrailing) {
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(
+                        isSelected ? Color("PrimaryColor") : AppTheme.Colors.glassBorder,
+                        lineWidth: isSelected ? 1.5 : 0.5
+                    )
+                
+                if isPremium && !userIsPremium {
+                    Image(systemName: "crown.fill")
+                        .font(.caption)
+                        .foregroundColor(Color("AccentColor"))
+                        .padding(6)
+                        .background(Color.black.opacity(0.3).clipShape(Circle()))
+                        .padding(8)
+                }
+            }
+        )
+        .shadow(color: AppTheme.Colors.glassShadow, radius: 10, x: 0, y: 5)
+        .opacity(isPremium && !userIsPremium ? 0.7 : 1.0)
+        .animation(.spring(), value: isSelected)
     }
 }
 
 #Preview {
     FrequenciesView()
+        .environmentObject(UserService.shared)
 }
-
-// Modern bilgi kartı
-fileprivate struct InfoCard: View {
-    let title: String
-    let text: String
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: "info.circle.fill")
-                    .foregroundColor(ThemeManager.shared.secondaryColor)
-                Text(title)
-                    .font(.system(size: 17, weight: .bold, design: .rounded))
-                    .foregroundColor(ThemeManager.shared.primaryColor)
-            }
-            Text(text)
-                .font(.system(size: 15, weight: .regular, design: .rounded))
-                .foregroundColor(.white.opacity(0.88))
-        }
-        .padding(16)
-        .background(ThemeManager.shared.primaryColor.opacity(0.06))
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(ThemeManager.shared.primaryColor.opacity(0.13), lineWidth: 1)
-        )
-    }
-} 
