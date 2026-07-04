@@ -13,12 +13,13 @@ struct Frequency: Identifiable {
 class AudioPlayer {
     private var audioPlayer: AVAudioPlayer?
     private var currentFrequency: Int?
-    
+    var onError: ((String) -> Void)?
+
     deinit {
         // Automatically stop the player when the view is dismissed
         self.stop()
     }
-    
+
     func play(frequency: Int, volume: Float) {
         // Get the filename based on frequency
         let filename: String
@@ -35,18 +36,20 @@ class AudioPlayer {
         case 852: filename = "852"
         default: return
         }
-        
+
         // Get the URL for the audio file
-        guard let url = Bundle.main.url(forResource: filename, withExtension: "mp3") else {
-            print("Could not find audio file: \(filename).mp3")
+        guard let url = AudioResourceLocator.url(forResource: filename, withExtension: "mp3") else {
+            let message = "Could not find audio file: \(filename).mp3"
+            print(message)
+            onError?(message)
             return
         }
-        
+
         do {
             // Configure audio session
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
             try AVAudioSession.sharedInstance().setActive(true)
-            
+
             // Create and configure audio player
             audioPlayer = try AVAudioPlayer(contentsOf: url)
             audioPlayer?.prepareToPlay()
@@ -54,10 +57,12 @@ class AudioPlayer {
             audioPlayer?.volume = volume
             audioPlayer?.play()
             currentFrequency = frequency
-            
+
             print("Playing frequency: \(frequency) Hz")
         } catch {
-            print("Error playing audio: \(error.localizedDescription)")
+            let message = "Error playing audio: \(error.localizedDescription)"
+            print(message)
+            onError?(message)
         }
     }
     
@@ -156,6 +161,8 @@ struct FrequenciesView: View {
     @State private var isBackButtonPressed = false
     @State private var animateBackground = false
     @State private var showPremiumSheet = false
+    @State private var errorMessage: String?
+    @State private var showErrorAlert = false
     private let audioPlayer = AudioPlayer()
     
     private let frequencies = [
@@ -327,6 +334,10 @@ struct FrequenciesView: View {
         .animation(.spring(), value: selectedFrequency?.id)
         .onAppear {
             animateBackground = true
+            audioPlayer.onError = { message in
+                errorMessage = message
+                showErrorAlert = true
+            }
         }
         .sheet(isPresented: $showInfo) {
             FrequencyInfoView()
@@ -335,6 +346,13 @@ struct FrequenciesView: View {
         .sheet(isPresented: $showPremiumSheet) {
             PremiumView()
                 .preferredColorScheme(.dark)
+        }
+        .alert("Error", isPresented: $showErrorAlert) {
+            Button("OK") { }
+        } message: {
+            if let errorMessage = errorMessage {
+                Text(errorMessage)
+            }
         }
     }
     

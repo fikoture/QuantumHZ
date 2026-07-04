@@ -191,7 +191,7 @@ struct ContentView: View {
     }
     
     private func setupAudioPlayer() {
-        guard audioPlayer == nil, let url = Bundle.main.url(forResource: "MainMusic", withExtension: "mp3") else {
+        guard audioPlayer == nil, let url = AudioResourceLocator.url(forResource: "MainMusic", withExtension: "mp3") else {
             return
         }
         

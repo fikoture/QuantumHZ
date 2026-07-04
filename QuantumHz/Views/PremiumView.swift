@@ -2,7 +2,8 @@ import SwiftUI
 
 struct PremiumView: View {
     @Environment(\.dismiss) private var dismiss
-    
+    @StateObject private var purchaseService = PurchaseService.shared
+
     var body: some View {
         ZStack {
             Color("BackgroundColor").ignoresSafeArea()
@@ -51,24 +52,36 @@ struct PremiumView: View {
                     
                     // Call to Action
                     Button(action: {
-                        // Handle purchase logic
-                        dismiss()
+                        Task {
+                            await purchaseService.purchasePremium()
+                            if UserService.shared.isPremium() {
+                                dismiss()
+                            }
+                        }
                     }) {
-                        Text("Upgrade Now - $4.99/month")
-                            .font(.system(size: 18, weight: .bold, design: .rounded))
-                            .foregroundColor(.white)
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [Color("AccentColor"), Color("PrimaryColor")]),
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
+                        Group {
+                            if purchaseService.isPurchasing {
+                                ProgressView()
+                                    .tint(.white)
+                            } else {
+                                Text("Upgrade Now - $4.99/month")
+                                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                            }
+                        }
+                        .foregroundColor(.white)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color("AccentColor"), Color("PrimaryColor")]),
+                                startPoint: .leading,
+                                endPoint: .trailing
                             )
-                            .cornerRadius(16)
-                            .shadow(color: Color("AccentColor").opacity(0.4), radius: 10, x: 0, y: 5)
+                        )
+                        .cornerRadius(16)
+                        .shadow(color: Color("AccentColor").opacity(0.4), radius: 10, x: 0, y: 5)
                     }
+                    .disabled(purchaseService.isPurchasing)
                     .padding(.top, 10)
                     
                     Button(action: {
@@ -82,6 +95,16 @@ struct PremiumView: View {
                 }
                 .padding()
             }
+        }
+        .alert("Error", isPresented: Binding(
+            get: { purchaseService.errorMessage != nil },
+            set: { isPresented in
+                if !isPresented { purchaseService.errorMessage = nil }
+            }
+        )) {
+            Button("OK") { }
+        } message: {
+            Text(purchaseService.errorMessage ?? "")
         }
     }
 }

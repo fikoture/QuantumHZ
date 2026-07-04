@@ -62,6 +62,16 @@ struct WhiteNoiseView: View {
         .onDisappear {
             audioManager.stopAllSounds()
         }
+        .alert("Error", isPresented: Binding(
+            get: { audioManager.errorMessage != nil },
+            set: { isPresented in
+                if !isPresented { audioManager.errorMessage = nil }
+            }
+        )) {
+            Button("OK") { }
+        } message: {
+            Text(audioManager.errorMessage ?? "")
+        }
     }
     
     private var headerView: some View {
@@ -150,9 +160,10 @@ class WhiteNoiseAudioManager: ObservableObject {
         }
     }
     @Published var currentlyPlaying: WhiteNoiseSound?
-    
+    @Published var errorMessage: String?
+
     private var player: AVAudioPlayer?
-    
+
     func toggleSound(_ sound: WhiteNoiseSound) {
         if currentlyPlaying?.id == sound.id {
             // Stop the currently playing sound
@@ -162,26 +173,26 @@ class WhiteNoiseAudioManager: ObservableObject {
             playSound(sound)
         }
     }
-    
+
     private func playSound(_ sound: WhiteNoiseSound) {
-        guard let url = Bundle.main.url(forResource: sound.fileName, withExtension: "mp3") else {
-            print("Could not find sound file: \(sound.fileName).mp3")
+        guard let url = AudioResourceLocator.url(forResource: sound.fileName, withExtension: "mp3") else {
+            errorMessage = "Could not find sound file: \(sound.fileName).mp3"
             return
         }
-        
+
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
             try AVAudioSession.sharedInstance().setActive(true)
-            
+
             player = try AVAudioPlayer(contentsOf: url)
             player?.numberOfLoops = -1
             player?.volume = volume
             player?.play()
-            
+
             isPlaying = true
             currentlyPlaying = sound
         } catch {
-            print("Failed to play sound: \(error.localizedDescription)")
+            errorMessage = "Failed to play sound: \(error.localizedDescription)"
             stopAllSounds()
         }
     }

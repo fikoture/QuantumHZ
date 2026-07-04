@@ -1,17 +1,20 @@
 import SwiftUI
 import AVFoundation
-import WebKit
 
 // MARK: - Audio Manager
 class AudioPlayerManager: NSObject {
     static let shared = AudioPlayerManager()
     var player: AVPlayer?
-    
+    var onError: ((String) -> Void)?
+
+    private var statusObserver: NSKeyValueObservation?
+    private var failedToPlayObserver: NSObjectProtocol?
+
     private override init() {
         super.init()
         setupAudioSession()
     }
-    
+
     private func setupAudioSession() {
         do {
             let audioSession = AVAudioSession.sharedInstance()
@@ -21,17 +24,43 @@ class AudioPlayerManager: NSObject {
             print("Audio session error: \(error.localizedDescription)")
         }
     }
-    
+
     func playStream(url: URL) {
+        stop()
+
         let playerItem = AVPlayerItem(url: url)
         player = AVPlayer(playerItem: playerItem)
+
+        statusObserver = playerItem.observe(\.status, options: [.new]) { [weak self] item, _ in
+            guard item.status == .failed else { return }
+            let message = item.error?.localizedDescription ?? "Failed to load radio stream"
+            DispatchQueue.main.async {
+                self?.onError?(message)
+            }
+        }
+
+        failedToPlayObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemFailedToPlayToEndTime,
+            object: playerItem,
+            queue: .main
+        ) { [weak self] notification in
+            let error = notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error
+            self?.onError?(error?.localizedDescription ?? "Radio stream stopped unexpectedly")
+        }
+
         player?.play()
         player?.volume = 0.5
     }
-    
+
     func stop() {
         player?.pause()
         player = nil
+        statusObserver?.invalidate()
+        statusObserver = nil
+        if let observer = failedToPlayObserver {
+            NotificationCenter.default.removeObserver(observer)
+            failedToPlayObserver = nil
+        }
     }
 }
 
@@ -122,6 +151,12 @@ struct MeditationView: View {
         }
         .sheet(isPresented: $showPremiumSheet) {
             PremiumView()
+        }
+        .onAppear {
+            AudioPlayerManager.shared.onError = { message in
+                isRadioPlaying = false
+                showError(message)
+            }
         }
         .onDisappear {
             cleanupResources()
@@ -464,7 +499,7 @@ struct MeditationView: View {
     private func playSound(soundName: String) {
         if soundName == "Radio" { return }
         
-        guard let url = Bundle.main.url(forResource: soundName.lowercased(), withExtension: "mp3") else {
+        guard let url = AudioResourceLocator.url(forResource: soundName.lowercased(), withExtension: "mp3") else {
             showError("Could not find sound file: \(soundName)")
             return
         }
@@ -630,22 +665,6 @@ struct DurationButton: View {
         .accessibilityLabel("\(duration) minutes")
         .accessibilityHint(isDisabled ? "Premium required" : (isSelected ? "Selected" : ""))
     }
-}
-
-struct YouTubeView: UIViewRepresentable {
-    let videoID: String
-    
-    func makeUIView(context: Context) -> WKWebView {
-        let webView = WKWebView()
-        guard let url = URL(string: "https://www.youtube.com/embed/\(videoID)") else {
-            return webView
-        }
-        let request = URLRequest(url: url)
-        webView.load(request)
-        return webView
-    }
-    
-    func updateUIView(_ uiView: WKWebView, context: Context) {}
 }
 
 #Preview {
